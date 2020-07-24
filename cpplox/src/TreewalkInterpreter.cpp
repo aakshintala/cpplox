@@ -9,25 +9,38 @@ namespace cpplox {
 
 int TreewalkInterpreter::runScript(const char* const script) {
   const auto source = ([&]() {
-    std::fstream in(script, std::ios::in);
+    std::ifstream in(script, std::ifstream::in);
     in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     return std::string{std::istreambuf_iterator<char>{in},
                         std::istreambuf_iterator<char>{}};
   })();
-  return this->interpret(source);
+  int status = this->interpret(source);
+  if (hadError) status = 65;
+  return status;
 }
 
 int TreewalkInterpreter::runREPL() {
   std::string line;
   int lastStatus = 0;
-  while (std::getline(std::cin, line))
+  while (std::getline(std::cin, line)) {
     lastStatus = this->interpret(line);
+    hadError = false;
+  }
   return lastStatus;
 }
 
 int TreewalkInterpreter::interpret(const std::string &source) {
+  // Call scanner on the source to tokenize
+  // and then interpret tokens...
+  // This is currently unimplemented so we just print out the string,
+  // and return INTERNAL_SOFTWARE_ERRROR
   std::cout << source << std::endl;
   return 70;
+}
+
+void TreewalkInterpreter::error(int line, std::string message) {
+  std::cerr << "[Line " <<line <<"] Error: " << message <<std::endl;
+  hadError = true;
 }
 
 } // namespace cpplox

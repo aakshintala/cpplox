@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 
 namespace cpplox {
@@ -9,6 +10,9 @@ public:
 
 private:
   int interpret(const std::string &source);
+  void TreewalkInterpreter::error(int line, std::string message);
+
+  bool hadError = false;
 };
 
 } // namespace cpplox
