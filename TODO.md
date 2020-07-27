@@ -8,3 +8,4 @@ Things to implement:
     and display it to the user?
 * Implement better debugging information:
   * Storing more information than just the line a lexeme occurs on would help?
+* Scanner returns integer error codes. Convert to a global Status class;

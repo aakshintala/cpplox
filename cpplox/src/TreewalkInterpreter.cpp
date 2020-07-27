@@ -12,7 +12,7 @@ int TreewalkInterpreter::runScript(const char* const script) {
     std::ifstream in(script, std::ifstream::in);
     in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     return std::string{std::istreambuf_iterator<char>{in},
-                        std::istreambuf_iterator<char>{}};
+                       std::istreambuf_iterator<char>{}};
   })();
   int status = this->interpret(source);
   if (hadError) status = 65;
@@ -29,7 +29,7 @@ int TreewalkInterpreter::runREPL() {
   return lastStatus;
 }
 
-int TreewalkInterpreter::interpret(const std::string &source) {
+int TreewalkInterpreter::interpret(const std::string& source) {
   // Call scanner on the source to tokenize
   // and then interpret tokens...
   // This is currently unimplemented so we just print out the string,
@@ -39,8 +39,8 @@ int TreewalkInterpreter::interpret(const std::string &source) {
 }
 
 void TreewalkInterpreter::error(int line, std::string message) {
-  std::cerr << "[Line " <<line <<"] Error: " << message <<std::endl;
+  std::cerr << "[Line " << line << "] Error: " << message << std::endl;
   hadError = true;
 }
 
-} // namespace cpplox
+}  // namespace cpplox
