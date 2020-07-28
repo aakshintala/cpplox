@@ -13,6 +13,7 @@
   IncludeBlocks: Preserve
   IndentPPDirectives: AfterHash
   IndentWidth: '2'
+  PenaltyExcessCharacter: 100000000
   SortIncludes: 'true'
   TabWidth: '2'
 ...

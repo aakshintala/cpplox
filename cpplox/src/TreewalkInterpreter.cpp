@@ -35,12 +35,8 @@ int TreewalkInterpreter::interpret(const std::string& source) {
   // This is currently unimplemented so we just print out the string,
   // and return INTERNAL_SOFTWARE_ERRROR
   std::cout << source << std::endl;
+  // hadError = true;
   return 70;
-}
-
-void TreewalkInterpreter::error(int line, std::string message) {
-  std::cerr << "[Line " << line << "] Error: " << message << std::endl;
-  hadError = true;
 }
 
 }  // namespace cpplox
