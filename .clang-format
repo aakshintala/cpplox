@@ -1,6 +1,6 @@
 ---
   BasedOnStyle: Google
-  AlignAfterOpenBracket: 'Align'
+
   AlignTrailingComments: 'true'
   AllowAllParametersOfDeclarationOnNextLine: 'false'
   AllowShortCaseLabelsOnASingleLine: 'true'

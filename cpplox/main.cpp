@@ -15,6 +15,7 @@ int main(int argc, char const *argv[]) {
   if (2 == argc) {
     return interpreter.runScript(argv[1]);
   } else {
-    return interpreter.runREPL();
+    interpreter.runREPL();
+    return 0;
   }
 }

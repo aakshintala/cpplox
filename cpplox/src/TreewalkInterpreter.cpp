@@ -1,8 +1,11 @@
 #include <fstream>
 #include <iostream>
+#include <list>
 #include <sstream>
 #include <string>
 
+#include "Scanner.h"
+#include "StatusCodes.h"
 #include "TreewalkInterpreter.h"
 
 namespace cpplox {
@@ -14,29 +17,35 @@ int TreewalkInterpreter::runScript(const char* const script) {
     return std::string{std::istreambuf_iterator<char>{in},
                        std::istreambuf_iterator<char>{}};
   })();
-  int status = this->interpret(source);
-  if (hadError) status = 65;
-  return status;
+
+  this->interpret(source);
+
+  if (hadError) return 65;
+  return 0;
 }
 
-int TreewalkInterpreter::runREPL() {
+void TreewalkInterpreter::runREPL() {
   std::string line;
-  int lastStatus = 0;
   while (std::getline(std::cin, line)) {
-    lastStatus = this->interpret(line);
+    this->interpret(line);
     hadError = false;
   }
-  return lastStatus;
 }
 
-int TreewalkInterpreter::interpret(const std::string& source) {
-  // Call scanner on the source to tokenize
-  // and then interpret tokens...
-  // This is currently unimplemented so we just print out the string,
-  // and return INTERNAL_SOFTWARE_ERRROR
-  std::cout << source << std::endl;
-  // hadError = true;
-  return 70;
+void TreewalkInterpreter::interpret(const std::string& source) {
+  std::list<Token> tokens;
+  ErrorReporter eReporter;
+  Scanner scanner(source, tokens, eReporter);
+
+  scanner.tokenize();
+  if (eReporter.getStatus() != LoxStatus::OK) {
+    hadError = true;
+    eReporter.printToStdErr();
+  } else {
+    for (auto& t : tokens) {
+      std::cout << t.toString() << std::endl;
+    }
+  }
 }
 
 }  // namespace cpplox

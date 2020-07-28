@@ -9,11 +9,10 @@ namespace cpplox {
 class TreewalkInterpreter {
  public:
   int runScript(const char const *script);
-  int runREPL();
+  void runREPL();
 
  private:
-  int interpret(const std::string &source);
-  void TreewalkInterpreter::error(int line, std::string message);
+  void interpret(const std::string &source);
 
   bool hadError = false;
 };

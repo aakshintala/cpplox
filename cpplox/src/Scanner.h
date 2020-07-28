@@ -14,28 +14,34 @@ namespace cpplox {
 
 class Scanner {
  public:
-  Scanner(std::string &p_source, std::list<Token> &p_tokens,
-          ErrorReporter &eReporter)
-      : source(p_source), tokens(p_tokens);
+  Scanner(const std::string &p_source, std::list<Token> &p_tokens,
+          ErrorReporter &p_eReporter)
+      : source(p_source), tokens(p_tokens), eReporter(p_eReporter) {}
 
-  int tokenize();
+  void tokenize();
 
  private:
   bool isAtEnd();
-  bool isDigit();
+  bool isAlpha(char c);
+  bool isAlphaNumeric(char c);
+  bool isDigit(char c);
   void tokenizeOne();
   char advance();
   bool matchNext(char expected);
   char peek();
-  void eatString();
+  char peekNext();
   void eatComment();
+  void eatIdentifier();
   void eatNumber();
+  void eatString();
   void addToken(TokenType t);
-  void addToken(TokenType t, optionalLiteral literal);
+  void addToken(TokenType t, OptionalLiteral literal);
 
-  std::string source;
+  static TokenType ReservedOrIdentifier(const std::string &str);
+
+  const std::string &source;
   std::list<Token> &tokens;
-  ErrorReporter eReporter;
+  ErrorReporter &eReporter;
   int start = 0;
   int current = 0;
   int line = 1;
