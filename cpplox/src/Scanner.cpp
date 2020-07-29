@@ -127,12 +127,15 @@ void Scanner::tokenizeOne() {
     case '\n': ++line; break;
     case '"': eatString(); break;
     default:
-      if (isDigit(c))
+      if (isDigit(c)) {
         eatNumber();
-      else if (isAlpha(c))
+      } else if (isAlpha(c)) {
         eatIdentifier();
-      else
-        eReporter.setError(line, "Unexpected character: " + std::to_string(c));
+      } else {
+        std::string message = "Unexpected character: ";
+        message.append(1, static_cast<char>(c));
+        eReporter.setError(line, message);
+      }
       break;
   }
 }

@@ -69,25 +69,23 @@ struct Token {
       : type(p_type), lexeme(p_lexeme), literal(p_literal), line(p_line) {}
 
   std::string toString() {
-    std::string result
-        = std::to_string(line) + " " + TokenTypeString(type) + " " + lexeme;
+    std::string result = std::to_string(line) + " " + TokenTypeString(type)
+                         + " " + lexeme + " ";
     if (literal.has_value())
-      result += " "
-                + std::visit(
-                    [](auto& arg) -> std::string {
-                      using T = std::decay_t<decltype(arg)>;
-                      if constexpr (std::is_same_v<T, std::string>)
-                        return arg;
-                      else if constexpr (std::is_same_v<T, double>)
-                        return std::to_string(arg);
-                      else
-                        static_assert(
-                            always_false_v<T>,
+      result += std::visit(
+          [](auto& arg) -> std::string {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::string>)
+              return arg;
+            else if constexpr (std::is_same_v<T, double>)
+              return std::to_string(arg);
+            else
+              static_assert(always_false_v<T>,
                             "Looks like you forgot to update this visitor!");
-                    },
-                    literal.value());
+          },
+          literal.value());
     else
-      result += " No Literal";
+      result += "No Literal";
     return result;
   }
 
