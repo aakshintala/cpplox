@@ -1,6 +1,5 @@
 ---
   BasedOnStyle: Google
-
   AlignTrailingComments: 'true'
   AllowAllParametersOfDeclarationOnNextLine: 'false'
   AllowShortCaseLabelsOnASingleLine: 'true'

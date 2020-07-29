@@ -42,6 +42,7 @@ void TreewalkInterpreter::interpret(const std::string& source) {
     hadError = true;
     eReporter.printToStdErr();
   } else {
+    std::cout << "Line TokenType lexeme literal" << std::endl;
     for (auto& t : tokens) {
       std::cout << t.toString() << std::endl;
     }

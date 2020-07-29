@@ -5,7 +5,7 @@ namespace cpplox {
 void Scanner::addToken(TokenType t) { addToken(t, std::nullopt); }
 
 void Scanner::addToken(TokenType t, OptionalLiteral literal) {
-  std::string lexeme = source.substr(start, current - start + 1);
+  std::string lexeme = source.substr(start, current - start);
   tokens.emplace_back(t, lexeme, literal, line);
 }
 
@@ -18,7 +18,7 @@ void Scanner::eatComment() {
 void Scanner::eatIdentifier() {
   while (isAlphaNumeric(peek())) advance();
 
-  std::string str = source.substr(start, current - start + 1);
+  std::string str = source.substr(start, current - start);
   OptionalLiteral ol(std::in_place, str);
   addToken(ReservedOrIdentifier(str), ol);
 }
@@ -31,7 +31,7 @@ void Scanner::eatNumber() {
     while (isDigit(peek())) advance();
   }
 
-  std::string str = source.substr(start, current - start + 1);
+  std::string str = source.substr(start, current - start);
   // Literal l(stod(str));
   OptionalLiteral ol(std::in_place, stod(str));
   addToken(TokenType::NUMBER, ol);
@@ -50,7 +50,10 @@ void Scanner::eatString() {
 
     // The offsets used below are different from the ones in the other
     // functions because we want to get rid of the enclosing quotation marks
-    std::string str = source.substr(start + 1, current - start);
+    //  "aaaaaaaa"
+    // ^          ^
+    // Start      current
+    std::string str = source.substr(start + 1, current - start - 2);
     OptionalLiteral ol(std::in_place, str);
     addToken(TokenType::STRING, ol);
   }
