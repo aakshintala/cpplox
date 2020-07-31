@@ -4,8 +4,9 @@
 #include <sstream>
 #include <string>
 
+#include "ErrorReporter.h"
 #include "Scanner.h"
-#include "StatusCodes.h"
+#include "Token.h"
 #include "TreewalkInterpreter.h"
 
 namespace cpplox {
