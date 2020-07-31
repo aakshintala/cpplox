@@ -1,15 +1,76 @@
 #include "Scanner.h"
 
+#include <map>
+
+#include "ErrorReporter.h"
+#include "Token.h"
+
 namespace cpplox {
 
-void Scanner::addToken(TokenType t) { addToken(t, std::nullopt); }
+namespace {
 
-void Scanner::addToken(TokenType t, OptionalLiteral literal) {
-  std::string lexeme = source.substr(start, current - start);
-  tokens.emplace_back(t, lexeme, literal, line);
+bool isAlpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-char Scanner::advance() { return source[current++]; }
+bool isDigit(char c) { return c >= '0' && c <= '9'; }
+
+bool isAlphaNumeric(char c) { return isAlpha(c) || isDigit(c); }
+
+TokenType ReservedOrIdentifier(const std::string& str) {
+  static const std::map<std::string, TokenType> lookUpTable{
+      {"and", TokenType::AND},       {"class", TokenType::CLASS},
+      {"else", TokenType::ELSE},     {"false", TokenType::FALSE},
+      {"fun", TokenType::FUN},       {"for", TokenType::FOR},
+      {"if", TokenType::IF},         {"nil", TokenType::NIL},
+      {"or", TokenType::OR},         {"print", TokenType::PRINT},
+      {"return", TokenType::RETURN}, {"super", TokenType::SUPER},
+      {"this", TokenType::THIS},     {"true", TokenType::TRUE},
+      {"var", TokenType::VAR},       {"while", TokenType::WHILE}};
+
+  auto iter = lookUpTable.find(str);
+  if (iter == lookUpTable.end())
+    return TokenType::IDENTIFIER;
+  else
+    return iter->second;
+}
+
+const std::string getLexeme(const std::string& source, size_t start,
+                            size_t end) {
+  return source.substr(start, end);
+}
+
+OptionalLiteral makeOptionalDoubleLiteral(const std::string& lexeme) {
+  DoubleLiteral dLiteral = {stod(lexeme), lexeme};
+  OptionalLiteral literal(std::in_place, dLiteral);
+  return literal;
+}
+
+OptionalLiteral makeOptionalStringLiteral(const std::string& lexeme) {
+  OptionalLiteral literal(std::in_place, lexeme.substr(1, lexeme.size() - 1));
+  return literal;
+}
+
+OptionalLiteral makeOptionalLiteral(TokenType t, const std::string& lexeme) {
+  switch (t) {
+    case TokenType::NUMBER: return makeOptionalDoubleLiteral(lexeme);
+    case TokenType::STRING: return makeOptionalStringLiteral(lexeme);
+    default: return std::nullopt;
+  }
+}
+
+}  // namespace
+
+Scanner::Scanner(const std::string& p_source, std::list<Token>& p_tokens,
+                 ErrorReporter& p_eReporter)
+    : source(p_source), tokens(p_tokens), eReporter(p_eReporter) {}
+
+void Scanner::addToken(TokenType t) {
+  const std::string lexeme = getLexeme(source, start, current - start);
+  tokens.emplace_back(t, lexeme, makeOptionalLiteral(t, lexeme), line);
+}
+
+void Scanner::advance() { ++current; }
 
 void Scanner::eatComment() {
   while (!isAtEnd() && peek() != '\n') advance();
@@ -17,10 +78,6 @@ void Scanner::eatComment() {
 
 void Scanner::eatIdentifier() {
   while (isAlphaNumeric(peek())) advance();
-
-  std::string str = source.substr(start, current - start);
-  OptionalLiteral ol(std::in_place, str);
-  addToken(ReservedOrIdentifier(str), ol);
 }
 
 void Scanner::eatNumber() {
@@ -30,11 +87,6 @@ void Scanner::eatNumber() {
     advance();
     while (isDigit(peek())) advance();
   }
-
-  std::string str = source.substr(start, current - start);
-  // Literal l(stod(str));
-  OptionalLiteral ol(std::in_place, stod(str));
-  addToken(TokenType::NUMBER, ol);
 }
 
 void Scanner::eatString() {
@@ -47,34 +99,15 @@ void Scanner::eatString() {
     eReporter.setError(line, "Unterminated String!");
   } else {
     advance();  // consume the closing quote '"'
-
-    // The offsets used below are different from the ones in the other
-    // functions because we want to get rid of the enclosing quotation marks
-    //  "aaaaaaaa"
-    // ^          ^
-    // Start      current
-    std::string str = source.substr(start + 1, current - start - 2);
-    OptionalLiteral ol(std::in_place, str);
-    addToken(TokenType::STRING, ol);
   }
 }
 
 bool Scanner::isAtEnd() { return current >= source.size(); }
 
-bool Scanner::isAlpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'a' && c <= 'z') || (c == '_');
-}
-
-bool Scanner::isAlphaNumeric(char c) { return isAlpha(c) || isDigit(c); }
-
-bool Scanner::isDigit(char c) { return c >= '0' && c <= '9'; }
-
 bool Scanner::matchNext(char expected) {
-  if (!isAtEnd() && source[current] == expected) {
-    ++current;
-    return true;
-  }
-  return false;
+  bool nextMatches = (peek() == expected);
+  if (nextMatches) advance();
+  return nextMatches;
 }
 
 char Scanner::peek() {
@@ -96,7 +129,8 @@ void Scanner::tokenize() {
 }
 
 void Scanner::tokenizeOne() {
-  char c = advance();
+  char c = peek();
+  advance();
   switch (c) {
     case '(': addToken(TokenType::LEFT_PAREN); break;
     case ')': addToken(TokenType::RIGHT_PAREN); break;
@@ -125,12 +159,19 @@ void Scanner::tokenizeOne() {
     case '\t':
     case '\r': break;  // whitespace
     case '\n': ++line; break;
-    case '"': eatString(); break;
+    case '"':
+      eatString();
+      addToken(TokenType::STRING);
+      break;
     default:
       if (isDigit(c)) {
         eatNumber();
+        addToken(TokenType::NUMBER);
       } else if (isAlpha(c)) {
         eatIdentifier();
+        const std::string identifier
+            = getLexeme(source, start, current - start);
+        addToken(ReservedOrIdentifier(identifier));
       } else {
         std::string message = "Unexpected character: ";
         message.append(1, static_cast<char>(c));
@@ -138,24 +179,6 @@ void Scanner::tokenizeOne() {
       }
       break;
   }
-}
-
-TokenType Scanner::ReservedOrIdentifier(const std::string& str) {
-  static const std::map<std::string, TokenType> lookUpTable{
-      {"AND", TokenType::AND},       {"CLASS", TokenType::CLASS},
-      {"ELSE", TokenType::ELSE},     {"FALSE", TokenType::FALSE},
-      {"FUN", TokenType::FUN},       {"FOR", TokenType::FOR},
-      {"IF", TokenType::IF},         {"NIL", TokenType::NIL},
-      {"OR", TokenType::OR},         {"PRINT", TokenType::PRINT},
-      {"RETURN", TokenType::RETURN}, {"SUPER", TokenType::SUPER},
-      {"THIS", TokenType::THIS},     {"TRUE", TokenType::TRUE},
-      {"VAR", TokenType::VAR},       {"WHILE", TokenType::WHILE}};
-
-  auto iter = lookUpTable.find(str);
-  if (iter == lookUpTable.end())
-    return TokenType::IDENTIFIER;
-  else
-    return iter->second;
 }
 
 }  // namespace cpplox
