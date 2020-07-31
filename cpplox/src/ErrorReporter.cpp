@@ -4,8 +4,6 @@
 
 namespace cpplox {
 
-ErrorReporter::ErrorReporter() : status(LoxStatus::OK) {}
-
 void ErrorReporter::setError(int line, std::string message) {
   errorMessages.emplace_back("[Line " + std::to_string(line)
                              + "] Error: " + message);

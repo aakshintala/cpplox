@@ -11,8 +11,6 @@ enum struct LoxStatus { OK, ERROR };
 
 class ErrorReporter {
  public:
-  ErrorReporter();
-
   void setError(int line, std::string message);
 
   LoxStatus getStatus();
@@ -21,7 +19,7 @@ class ErrorReporter {
 
  private:
   std::vector<std::string> errorMessages;
-  LoxStatus status;
+  LoxStatus status = LoxStatus::OK;
 };
 
 }  // namespace cpplox
