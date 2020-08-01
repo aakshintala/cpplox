@@ -1,0 +1,10 @@
+/* single line block comment */
+
+print "ok"; /* expect: ok */
+
+/* comment
+ * spread
+ * over
+ * multiple
+ * lines
+ */
