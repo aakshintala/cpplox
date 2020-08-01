@@ -6,10 +6,18 @@
 #include <string>
 
 namespace cpplox {
-
+namespace ErrorsAndDebug {
 class ErrorReporter;
+}
+
+namespace Types {
 class Token;
 enum class TokenType;
+}  // namespace Types
+
+using ErrorsAndDebug::ErrorReporter;
+using Types::Token;
+using Types::TokenType;
 
 class Scanner {
  public:
@@ -25,7 +33,8 @@ class Scanner {
   bool matchNext(char expected);
   char peek();
   char peekNext();
-  void eatComment();
+  void skipComment();
+  void skipBlockComment();
   void eatIdentifier();
   void eatNumber();
   void eatString();

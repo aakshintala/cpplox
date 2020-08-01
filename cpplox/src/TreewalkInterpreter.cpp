@@ -1,15 +1,20 @@
+#include "TreewalkInterpreter.h"
+
 #include <fstream>
 #include <iostream>
 #include <list>
 #include <sstream>
 #include <string>
 
-#include "ErrorReporter.h"
+#include "ErrorsAndDebug/ErrorReporter.h"
 #include "Scanner.h"
-#include "Token.h"
-#include "TreewalkInterpreter.h"
+#include "Types/Token.h"
 
 namespace cpplox {
+
+using ErrorsAndDebug::ErrorReporter;
+using ErrorsAndDebug::LoxStatus;
+using Types::Token;
 
 int TreewalkInterpreter::runScript(const char* const script) {
   const auto source = ([&]() {
@@ -27,10 +32,17 @@ int TreewalkInterpreter::runScript(const char* const script) {
 
 void TreewalkInterpreter::runREPL() {
   std::string line;
-  while (std::getline(std::cin, line)) {
+  std::cout
+      << "# Greetings! I am a Tree-Walk Interpreter for the lox language\n"
+         "# from Bob Nystrom's excellent book, Crafting Interpreters.\n"
+         "# If you haven't already, check it out at "
+         "http://www.craftinginterpreters.com/"
+      << std::endl;
+  while (std::cout << "> " && std::getline(std::cin, line)) {
     this->interpret(line);
     hadError = false;
   }
+  std::cout << std::endl << "# Goodbye!" << std::endl;
 }
 
 void TreewalkInterpreter::interpret(const std::string& source) {

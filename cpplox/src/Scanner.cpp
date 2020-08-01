@@ -2,10 +2,17 @@
 
 #include <map>
 
-#include "ErrorReporter.h"
-#include "Token.h"
+#include "ErrorsAndDebug/ErrorReporter.h"
+#include "Types/Token.h"
 
 namespace cpplox {
+
+using ErrorsAndDebug::ErrorReporter;
+using Types::DoubleLiteral;
+using Types::Literal;
+using Types::OptionalLiteral;
+using Types::Token;
+using Types::TokenType;
 
 namespace {
 
@@ -72,7 +79,29 @@ void Scanner::addToken(TokenType t) {
 
 void Scanner::advance() { ++current; }
 
-void Scanner::eatComment() {
+void Scanner::skipBlockComment() {
+  int nesting = 1;
+  while (nesting > 0) {
+    if (peek() == '\0') {
+      eReporter.setError(line, "Block comment not closed?");
+      return;
+    }
+
+    if (peek() == '/' && peekNext() == '*') {
+      advance();
+      ++nesting;
+    } else if (peek() == '*' && peekNext() == '/') {
+      advance();
+      --nesting;
+    } else if (peek() == '\n') {
+      ++line;
+    }
+
+    advance();
+  }
+}
+
+void Scanner::skipComment() {
   while (!isAtEnd() && peek() != '\n') advance();
 }
 
@@ -154,7 +183,14 @@ void Scanner::tokenizeOne() {
     case '<':
       addToken(matchNext('=') ? TokenType::LESS_EQUAL : TokenType::LESS);
       break;
-    case '/': matchNext('/') ? eatComment() : addToken(TokenType::SLASH); break;
+    case '/':
+      if (matchNext('/'))
+        skipComment();
+      else if (matchNext('*'))
+        skipBlockComment();
+      else
+        addToken(TokenType::SLASH);
+      break;
     case ' ':
     case '\t':
     case '\r': break;  // whitespace

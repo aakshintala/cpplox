@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace cpplox {
+namespace ErrorsAndDebug {
 
 enum struct LoxStatus { OK, ERROR };
 
@@ -22,5 +23,6 @@ class ErrorReporter {
   LoxStatus status = LoxStatus::OK;
 };
 
+}  // namespace ErrorsAndDebug
 }  // namespace cpplox
 #endif  // ERRORREPORTER_H

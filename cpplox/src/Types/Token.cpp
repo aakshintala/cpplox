@@ -4,6 +4,7 @@
 #include <type_traits>
 
 namespace cpplox {
+namespace Types {
 
 template <class T> inline constexpr bool always_false_v = false;
 
@@ -79,4 +80,5 @@ std::string Token::toString() {
   return result;
 }
 
+}  // namespace Types
 }  // namespace cpplox

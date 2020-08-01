@@ -7,6 +7,7 @@
 #include <variant>
 
 namespace cpplox {
+namespace Types {
 
 enum class TokenType {
   // Single-character tokens.
@@ -80,6 +81,7 @@ class Token {
   int line;
 };
 
+}  // namespace Types
 }  // namespace cpplox
 
 #endif  // TOKEN_H

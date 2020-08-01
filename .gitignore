@@ -33,3 +33,6 @@
 
 # Bazel
 /bazel-*
+
+#MacOS junk
+.DS_Store

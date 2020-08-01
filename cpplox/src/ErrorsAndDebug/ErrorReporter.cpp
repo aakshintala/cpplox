@@ -3,6 +3,7 @@
 #include "ErrorReporter.h"
 
 namespace cpplox {
+namespace ErrorsAndDebug {
 
 void ErrorReporter::setError(int line, std::string message) {
   errorMessages.emplace_back("[Line " + std::to_string(line)
@@ -19,4 +20,5 @@ void ErrorReporter::printToStdErr() {
   }
 }
 
+}  // namespace ErrorsAndDebug
 }  // namespace cpplox
