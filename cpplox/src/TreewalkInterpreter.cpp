@@ -15,8 +15,9 @@ namespace cpplox {
 using ErrorsAndDebug::ErrorReporter;
 using ErrorsAndDebug::LoxStatus;
 using Types::Token;
+const int EXIT_DATAERR = 65;
 
-int TreewalkInterpreter::runScript(const char* const script) {
+auto TreewalkInterpreter::runScript(const char* const script) -> int {
   const auto source = ([&]() {
     std::ifstream in(script, std::ifstream::in);
     in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -26,7 +27,7 @@ int TreewalkInterpreter::runScript(const char* const script) {
 
   this->interpret(source);
 
-  if (hadError) return 65;
+  if (hadError) return EXIT_DATAERR;
   return 0;
 }
 

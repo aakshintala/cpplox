@@ -5,16 +5,15 @@
 #include <string>
 #include <vector>
 
-namespace cpplox {
-namespace ErrorsAndDebug {
+namespace cpplox::ErrorsAndDebug {
 
 enum struct LoxStatus { OK, ERROR };
 
 class ErrorReporter {
  public:
-  void setError(int line, std::string message);
+  void setError(int line, const std::string& message);
 
-  LoxStatus getStatus();
+  auto getStatus() -> LoxStatus;
 
   void printToStdErr();
 
@@ -23,6 +22,5 @@ class ErrorReporter {
   LoxStatus status = LoxStatus::OK;
 };
 
-}  // namespace ErrorsAndDebug
-}  // namespace cpplox
+}  // namespace cpplox::ErrorsAndDebug
 #endif  // ERRORREPORTER_H

@@ -36,3 +36,8 @@
 
 #MacOS junk
 .DS_Store
+compile_commands.json
+
+# Project Files
+.vscode
+external

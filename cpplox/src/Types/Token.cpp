@@ -2,14 +2,14 @@
 
 #include <map>
 #include <type_traits>
+#include <utility>
 
-namespace cpplox {
-namespace Types {
+namespace cpplox::Types {
 
 template <class T> inline constexpr bool always_false_v = false;
 
 namespace {
-const std::string TokenTypeString(const TokenType value) {
+auto TokenTypeString(const TokenType value) -> std::string {
   static const std::map<TokenType, std::string> lookUpTable{
       {TokenType::LEFT_PAREN, "LEFT_PAREN"},
       {TokenType::RIGHT_PAREN, "RIGHT_PAREN"},
@@ -55,11 +55,14 @@ const std::string TokenTypeString(const TokenType value) {
 }
 }  // namespace
 
-Token::Token(TokenType p_type, const std::string p_lexeme,
-             OptionalLiteral p_literal, int p_line)
-    : type(p_type), lexeme(p_lexeme), literal(p_literal), line(p_line) {}
+Token::Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
+             int p_line)
+    : type(p_type),
+      lexeme(std::move(p_lexeme)),
+      literal(std::move(p_literal)),
+      line(p_line) {}
 
-std::string Token::toString() {
+auto Token::toString() -> std::string {
   std::string result
       = std::to_string(line) + " " + TokenTypeString(type) + " " + lexeme + " ";
   if (literal.has_value())
@@ -80,5 +83,4 @@ std::string Token::toString() {
   return result;
 }
 
-}  // namespace Types
-}  // namespace cpplox
+}  // namespace cpplox::Types

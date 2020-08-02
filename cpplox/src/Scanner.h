@@ -27,12 +27,12 @@ class Scanner {
   void tokenize();
 
  private:
-  bool isAtEnd();
+  auto isAtEnd() -> bool;
   void tokenizeOne();
   void advance();
-  bool matchNext(char expected);
-  char peek();
-  char peekNext();
+  auto matchNext(char expected) -> bool;
+  auto peek() -> char;
+  auto peekNext() -> char;
   void skipComment();
   void skipBlockComment();
   void eatIdentifier();

@@ -2,16 +2,15 @@
 
 #include "ErrorReporter.h"
 
-namespace cpplox {
-namespace ErrorsAndDebug {
+namespace cpplox::ErrorsAndDebug {
 
-void ErrorReporter::setError(int line, std::string message) {
+void ErrorReporter::setError(int line, const std::string& message) {
   errorMessages.emplace_back("[Line " + std::to_string(line)
                              + "] Error: " + message);
   status = LoxStatus::ERROR;
 }
 
-LoxStatus ErrorReporter::getStatus() { return status; }
+auto ErrorReporter::getStatus() -> LoxStatus { return status; }
 
 void ErrorReporter::printToStdErr() {
   std::cerr << "Oh-Oh, Your Lox code appears to contain errors!" << std::endl;
@@ -20,5 +19,4 @@ void ErrorReporter::printToStdErr() {
   }
 }
 
-}  // namespace ErrorsAndDebug
-}  // namespace cpplox
+}  // namespace cpplox::ErrorsAndDebug

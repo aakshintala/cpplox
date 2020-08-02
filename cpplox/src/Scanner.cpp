@@ -16,15 +16,15 @@ using Types::TokenType;
 
 namespace {
 
-bool isAlpha(char c) {
+auto isAlpha(char c) -> bool {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-bool isDigit(char c) { return c >= '0' && c <= '9'; }
+auto isDigit(char c) -> bool { return c >= '0' && c <= '9'; }
 
-bool isAlphaNumeric(char c) { return isAlpha(c) || isDigit(c); }
+auto isAlphaNumeric(char c) -> bool { return isAlpha(c) || isDigit(c); }
 
-TokenType ReservedOrIdentifier(const std::string& str) {
+auto ReservedOrIdentifier(const std::string& str) -> TokenType {
   static const std::map<std::string, TokenType> lookUpTable{
       {"and", TokenType::AND},       {"class", TokenType::CLASS},
       {"else", TokenType::ELSE},     {"false", TokenType::FALSE},
@@ -36,29 +36,30 @@ TokenType ReservedOrIdentifier(const std::string& str) {
       {"var", TokenType::VAR},       {"while", TokenType::WHILE}};
 
   auto iter = lookUpTable.find(str);
-  if (iter == lookUpTable.end())
+  if (iter == lookUpTable.end()) {
     return TokenType::IDENTIFIER;
-  else
-    return iter->second;
+  }
+  return iter->second;
 }
 
-const std::string getLexeme(const std::string& source, size_t start,
-                            size_t end) {
+auto getLexeme(const std::string& source, size_t start, size_t end)
+    -> std::string {
   return source.substr(start, end);
 }
 
-OptionalLiteral makeOptionalDoubleLiteral(const std::string& lexeme) {
+auto makeOptionalDoubleLiteral(const std::string& lexeme) -> OptionalLiteral {
   DoubleLiteral dLiteral = {stod(lexeme), lexeme};
   OptionalLiteral literal(std::in_place, dLiteral);
   return literal;
 }
 
-OptionalLiteral makeOptionalStringLiteral(const std::string& lexeme) {
+auto makeOptionalStringLiteral(const std::string& lexeme) -> OptionalLiteral {
   OptionalLiteral literal(std::in_place, lexeme.substr(1, lexeme.size() - 1));
   return literal;
 }
 
-OptionalLiteral makeOptionalLiteral(TokenType t, const std::string& lexeme) {
+auto makeOptionalLiteral(TokenType t, const std::string& lexeme)
+    -> OptionalLiteral {
   switch (t) {
     case TokenType::NUMBER: return makeOptionalDoubleLiteral(lexeme);
     case TokenType::STRING: return makeOptionalStringLiteral(lexeme);
@@ -102,7 +103,9 @@ void Scanner::skipBlockComment() {
 }
 
 void Scanner::skipComment() {
-  while (!isAtEnd() && peek() != '\n') advance();
+  while (!isAtEnd() && peek() != '\n') {
+    advance();
+  }
 }
 
 void Scanner::eatIdentifier() {
@@ -131,20 +134,20 @@ void Scanner::eatString() {
   }
 }
 
-bool Scanner::isAtEnd() { return current >= source.size(); }
+auto Scanner::isAtEnd() -> bool { return current >= source.size(); }
 
-bool Scanner::matchNext(char expected) {
+auto Scanner::matchNext(char expected) -> bool {
   bool nextMatches = (peek() == expected);
   if (nextMatches) advance();
   return nextMatches;
 }
 
-char Scanner::peek() {
+auto Scanner::peek() -> char {
   if (isAtEnd()) return '\0';
   return source[current];
 }
 
-char Scanner::peekNext() {
+auto Scanner::peekNext() -> char {
   if ((current + 1) >= source.size()) return '\0';
   return source[current + 1];
 }

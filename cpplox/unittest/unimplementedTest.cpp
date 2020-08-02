@@ -2,7 +2,7 @@
 
 #include "TreewalkInterpreter.h"
 
-TEST(unimplemented_test, emptyscript) {
+TEST(unimplementedTest, emptyscript) {
   cpplox::TreewalkInterpreter interpreter;
-  EXPECT_EQ(70, interpreter.runScript("./empty.lox"));
+  EXPECT_EQ(65, interpreter.runScript("./empty.lox"));
 }

@@ -8,7 +8,7 @@ namespace cpplox {
 
 class TreewalkInterpreter {
  public:
-  int runScript(const char* const script);
+  auto runScript(const char* script) -> int;
   void runREPL();
 
  private:

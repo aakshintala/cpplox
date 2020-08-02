@@ -6,8 +6,7 @@
 #include <string>
 #include <variant>
 
-namespace cpplox {
-namespace Types {
+namespace cpplox::Types {
 
 enum class TokenType {
   // Single-character tokens.
@@ -69,10 +68,10 @@ using OptionalLiteral = std::optional<Literal>;
 
 class Token {
  public:
-  Token(TokenType p_type, const std::string p_lexeme, OptionalLiteral p_literal,
+  Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
         int p_line);
 
-  std::string toString();
+  auto toString() -> std::string;
 
  private:
   TokenType type;
@@ -81,7 +80,6 @@ class Token {
   int line;
 };
 
-}  // namespace Types
-}  // namespace cpplox
+}  // namespace cpplox::Types
 
 #endif  // TOKEN_H
