@@ -1,5 +1,5 @@
-#ifndef ERRORREPORTER_H
-#define ERRORREPORTER_H
+#ifndef ERRORSANDDEBUG_ERRORREPORTER_H
+#define ERRORSANDDEBUG_ERRORREPORTER_H
 #pragma once
 
 #include <string>
@@ -23,4 +23,4 @@ class ErrorReporter {
 };
 
 }  // namespace cpplox::ErrorsAndDebug
-#endif  // ERRORREPORTER_H
+#endif  // ERRORSANDDEBUG_ERRORREPORTER_H

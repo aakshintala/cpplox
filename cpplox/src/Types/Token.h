@@ -1,5 +1,5 @@
-#ifndef TOKEN_H
-#define TOKEN_H
+#ifndef TYPES_TOKEN_H
+#define TYPES_TOKEN_H
 #pragma once
 
 #include <optional>
@@ -78,8 +78,7 @@ class Token {
   const std::string lexeme;
   OptionalLiteral literal;
   int line;
-};
+};  // class Token
 
 }  // namespace cpplox::Types
-
-#endif  // TOKEN_H
+#endif  // TYPES_TOKEN_H
