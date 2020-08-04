@@ -5,15 +5,10 @@
 #include <list>
 #include <string>
 
-namespace cpplox {
-namespace ErrorsAndDebug {
-class ErrorReporter;
-}
+#include "ErrorsAndDebug/ErrorReporter.h"
+#include "Types/Token.h"
 
-namespace Types {
-class Token;
-enum class TokenType;
-}  // namespace Types
+namespace cpplox {
 
 using ErrorsAndDebug::ErrorReporter;
 using Types::Token;
