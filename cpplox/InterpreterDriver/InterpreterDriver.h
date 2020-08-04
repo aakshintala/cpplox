@@ -1,12 +1,12 @@
-#ifndef TREEWALKINTERPRETER_H
-#define TREEWALKINTERPRETER_H
+#ifndef CPPLOX_INTERPRETERDRIVER_INTERPRETERDRIVER_H
+#define CPPLOX_INTERPRETERDRIVER_INTERPRETERDRIVER_H
 #pragma once
 
 #include <string>
 
 namespace cpplox {
 
-class TreewalkInterpreter {
+struct InterpreterDriver {
  public:
   auto runScript(const char* script) -> int;
   void runREPL();
@@ -19,4 +19,4 @@ class TreewalkInterpreter {
 
 }  // namespace cpplox
 
-#endif  // TREEWALKINTERPRETER_H
+#endif  // CPPLOX_INTERPRETERDRIVER_INTERPRETERDRIVER_H

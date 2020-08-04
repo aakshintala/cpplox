@@ -1,4 +1,4 @@
-#include "TreewalkInterpreter.h"
+#include "cpplox/InterpreterDriver/InterpreterDriver.h"
 
 #include <fstream>
 #include <iostream>
@@ -6,18 +6,20 @@
 #include <sstream>
 #include <string>
 
-#include "ErrorsAndDebug/ErrorReporter.h"
-#include "Scanner.h"
-#include "Types/Token.h"
+#include "cpplox/AST/Expr.h"
+#include "cpplox/ErrorsAndDebug/ErrorReporter.h"
+#include "cpplox/Scanner/Scanner.h"
+#include "cpplox/Types/Token.h"
 
 namespace cpplox {
 
 using ErrorsAndDebug::ErrorReporter;
 using ErrorsAndDebug::LoxStatus;
 using Types::Token;
+using Types::TokenType;
 const int EXIT_DATAERR = 65;
 
-auto TreewalkInterpreter::runScript(const char* const script) -> int {
+auto InterpreterDriver::runScript(const char* const script) -> int {
   const auto source = ([&]() {
     std::ifstream in(script, std::ifstream::in);
     in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -31,7 +33,7 @@ auto TreewalkInterpreter::runScript(const char* const script) -> int {
   return 0;
 }
 
-void TreewalkInterpreter::runREPL() {
+void InterpreterDriver::runREPL() {
   std::string line;
   std::cout
       << "# Greetings! I am a Tree-Walk Interpreter for the lox language\n"
@@ -46,12 +48,13 @@ void TreewalkInterpreter::runREPL() {
   std::cout << std::endl << "# Goodbye!" << std::endl;
 }
 
-void TreewalkInterpreter::interpret(const std::string& source) {
+void InterpreterDriver::interpret(const std::string& source) {
   std::list<Token> tokens;
   ErrorReporter eReporter;
-  Scanner scanner(source, tokens, eReporter);
 
+  Scanner scanner(source, tokens, eReporter);
   scanner.tokenize();
+
   if (eReporter.getStatus() != LoxStatus::OK) {
     hadError = true;
     eReporter.printToStdErr();

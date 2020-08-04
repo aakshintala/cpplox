@@ -1,12 +1,12 @@
-#ifndef SCANNER_H
-#define SCANNER_H
+#ifndef CPPLOX_SCANNER_SCANNER_H
+#define CPPLOX_SCANNER_SCANNER_H
 #pragma once
 
 #include <list>
 #include <string>
 
-#include "ErrorsAndDebug/ErrorReporter.h"
-#include "Types/Token.h"
+#include "cpplox/ErrorsAndDebug/ErrorReporter.h"
+#include "cpplox/Types/Token.h"
 
 namespace cpplox {
 
@@ -45,4 +45,4 @@ class Scanner {
 
 }  // namespace cpplox
 
-#endif  // SCANNER_H
+#endif  // CPPLOX_SCANNER_SCANNER_H

@@ -1,9 +1,9 @@
-#include "Scanner.h"
+#include "cpplox/Scanner/Scanner.h"
 
 #include <map>
 
-#include "ErrorsAndDebug/ErrorReporter.h"
-#include "Types/Token.h"
+#include "cpplox/ErrorsAndDebug/ErrorReporter.h"
+#include "cpplox/Types/Token.h"
 
 namespace cpplox {
 

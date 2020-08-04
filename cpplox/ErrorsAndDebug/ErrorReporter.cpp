@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "ErrorReporter.h"
+#include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 
 namespace cpplox::ErrorsAndDebug {
 
