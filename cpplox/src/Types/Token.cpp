@@ -53,6 +53,23 @@ auto TokenTypeString(const TokenType value) -> std::string {
 
   return lookUpTable.find(value)->second;
 }
+
+auto getLiteralString(Literal &value) -> std::string {
+  // Literal = std::variant<std::string, DoubleLiteral>;
+  switch (value.index()) {
+    case 0:  // string
+      return std::get<0>(value);
+      break;
+    case 1:  // DoubleLiteral
+      return std::get<1>(value).stringLiteral;
+      break;
+    default:
+      static_assert(
+          std::variant_size_v<Literal> == 2,
+          "Looks like you forgot to update the cases in getLiteralString()!");
+  }
+  return "";
+}
 }  // namespace
 
 Token::Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
@@ -65,21 +82,8 @@ Token::Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
 auto Token::toString() -> std::string {
   std::string result
       = std::to_string(line) + " " + TokenTypeString(type) + " " + lexeme + " ";
-  if (literal.has_value())
-    result += std::visit(
-        [](auto& arg) -> std::string {
-          using T = std::decay_t<decltype(arg)>;
-          if constexpr (std::is_same_v<T, std::string>)
-            return arg;
-          else if constexpr (std::is_same_v<T, DoubleLiteral>)
-            return arg.stringLiteral;
-          else
-            static_assert(always_false_v<T>,
-                          "Looks like you forgot to update this visitor!");
-        },
-        literal.value());
-  else
-    result += "No Literal";
+  result
+      += literal.has_value() ? getLiteralString(literal.value()) : "No Literal";
   return result;
 }
 
