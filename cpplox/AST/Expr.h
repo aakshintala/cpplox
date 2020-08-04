@@ -56,7 +56,6 @@ struct LiteralExpr final : public Uncopyable,
                            public std::enable_shared_from_this<LiteralExpr> {
   Literal value;
   explicit LiteralExpr(Literal value);
-  auto printLiteral() -> std::string;
 };
 
 struct UnaryExpr final : public Uncopyable,
