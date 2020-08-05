@@ -6,6 +6,7 @@
 #include <string>
 #include <variant>
 
+#include "cpplox/Types/Literal.h"
 #include "cpplox/Types/Token.h"
 #include "cpplox/Types/Uncopyable.h"
 
@@ -54,8 +55,8 @@ struct GroupingExpr final : public Uncopyable,
 
 struct LiteralExpr final : public Uncopyable,
                            public std::enable_shared_from_this<LiteralExpr> {
-  Literal value;
-  explicit LiteralExpr(Literal value);
+  OptionalLiteral literalVal;
+  explicit LiteralExpr(OptionalLiteral value);
 };
 
 struct UnaryExpr final : public Uncopyable,
