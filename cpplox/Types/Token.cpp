@@ -1,12 +1,11 @@
-#include "Token.h"
+#include "cpplox/Types/Token.h"
+#include "cpplox/Types/Literal.h"
 
 #include <map>
 #include <type_traits>
 #include <utility>
 
 namespace cpplox::Types {
-
-template <class T> inline constexpr bool always_false_v = false;
 
 namespace {
 auto TokenTypeString(const TokenType value) -> std::string {
@@ -54,22 +53,6 @@ auto TokenTypeString(const TokenType value) -> std::string {
   return lookUpTable.find(value)->second;
 }
 
-auto getLiteralString(Literal &value) -> std::string {
-  // Literal = std::variant<std::string, DoubleLiteral>;
-  switch (value.index()) {
-    case 0:  // string
-      return std::get<0>(value);
-      break;
-    case 1:  // DoubleLiteral
-      return std::get<1>(value).stringLiteral;
-      break;
-    default:
-      static_assert(
-          std::variant_size_v<Literal> == 2,
-          "Looks like you forgot to update the cases in getLiteralString()!");
-  }
-  return "";
-}
 }  // namespace
 
 Token::Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
@@ -79,6 +62,16 @@ Token::Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
       literal(std::move(p_literal)),
       line(p_line) {}
 
+Token::Token(TokenType p_type, const char* p_lexeme, OptionalLiteral p_literal,
+             int p_line)
+    : type(p_type),
+      lexeme(p_lexeme),
+      literal(std::move(p_literal)),
+      line(p_line) {}
+
+Token::Token(TokenType p_type, const char* p_lexeme)
+    : type(p_type), lexeme(p_lexeme) {}
+
 auto Token::toString() -> std::string {
   std::string result
       = std::to_string(line) + " " + TokenTypeString(type) + " " + lexeme + " ";
@@ -86,5 +79,8 @@ auto Token::toString() -> std::string {
       += literal.has_value() ? getLiteralString(literal.value()) : "No Literal";
   return result;
 }
+
+auto Token::getType() -> TokenType { return type; }
+auto Token::getLexeme() -> std::string { return lexeme; }
 
 }  // namespace cpplox::Types

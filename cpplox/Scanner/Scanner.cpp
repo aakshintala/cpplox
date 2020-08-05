@@ -47,22 +47,14 @@ auto getLexeme(const std::string& source, size_t start, size_t end)
   return source.substr(start, end);
 }
 
-auto makeOptionalDoubleLiteral(const std::string& lexeme) -> OptionalLiteral {
-  DoubleLiteral dLiteral = {stod(lexeme), lexeme};
-  OptionalLiteral literal(std::in_place, dLiteral);
-  return literal;
-}
-
-auto makeOptionalStringLiteral(const std::string& lexeme) -> OptionalLiteral {
-  OptionalLiteral literal(std::in_place, lexeme.substr(1, lexeme.size() - 1));
-  return literal;
-}
-
 auto makeOptionalLiteral(TokenType t, const std::string& lexeme)
     -> OptionalLiteral {
   switch (t) {
-    case TokenType::NUMBER: return makeOptionalDoubleLiteral(lexeme);
-    case TokenType::STRING: return makeOptionalStringLiteral(lexeme);
+    case TokenType::NUMBER:
+      return Types::makeOptionalDoubleLiteral(std::stod(lexeme), lexeme);
+    case TokenType::STRING:
+      return Types::makeOptionalStringLiteral(
+          lexeme.substr(1, lexeme.size() - 1));
     default: return std::nullopt;
   }
 }

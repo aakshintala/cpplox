@@ -1,10 +1,11 @@
 #ifndef TYPES_TOKEN_H
 #define TYPES_TOKEN_H
+#include <optional>
 #pragma once
 
-#include <optional>
 #include <string>
-#include <variant>
+
+#include "cpplox/Types/Literal.h"
 
 namespace cpplox::Types {
 
@@ -58,26 +59,25 @@ enum class TokenType {
   LOX_EOF
 };
 
-struct DoubleLiteral {
-  double value;
-  std::string stringLiteral;
-};
-
-using Literal = std::variant<std::string, DoubleLiteral>;
-using OptionalLiteral = std::optional<Literal>;
-
 class Token {
  public:
   Token(TokenType p_type, std::string p_lexeme, OptionalLiteral p_literal,
         int p_line);
 
+  Token(TokenType p_type, const char* p_lexeme, OptionalLiteral p_literal,
+        int p_line);
+
+  Token(TokenType p_type, const char* p_lexeme);
+
   auto toString() -> std::string;
+  auto getType() -> TokenType;
+  auto getLexeme() -> std::string;
 
  private:
   TokenType type;
   const std::string lexeme;
-  OptionalLiteral literal;
-  int line;
+  OptionalLiteral literal = std::nullopt;
+  int line = 1;
 };  // class Token
 
 }  // namespace cpplox::Types
