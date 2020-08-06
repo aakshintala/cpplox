@@ -20,7 +20,10 @@ cc_test(
 
 cc_library(
     name = "pretty-printer",
-    srcs = ["PrettyPrinter.cpp"],
+    srcs = [
+        "PrettyPrinter.cpp",
+        "PrettyPrinterRPN.cpp",
+    ],
     hdrs = ["PrettyPrinter.h"],
     deps = [
         ":expressions",

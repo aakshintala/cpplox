@@ -29,4 +29,7 @@ TEST(PrettyPrinterTest, simple_expression) {
   // clang-format on
   PrettyPrinter printer(expr);
   EXPECT_EQ("(* (- 123) (group 45.67))", printer.toString());
+
+  PrettyPrinterRPN printerRPN(expr);
+  EXPECT_EQ("123 ~ 45.67 *", printerRPN.toString());
 }

@@ -14,4 +14,14 @@ struct PrettyPrinter {
   ExprPtrVariant expression;
 };
 
+struct PrettyPrinterRPN {
+  explicit PrettyPrinterRPN(ExprPtrVariant expression);
+  auto toString() -> std::string;
+  [[nodiscard]] auto toString(const ExprPtrVariant& expression) const
+      -> std::string;
+
+ private:
+  ExprPtrVariant expression;
+};
+
 }  // namespace cpplox::AST
