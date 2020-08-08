@@ -54,7 +54,7 @@ auto makeOptionalLiteral(TokenType t, const std::string& lexeme)
       return Types::makeOptionalDoubleLiteral(std::stod(lexeme), lexeme);
     case TokenType::STRING:
       return Types::makeOptionalStringLiteral(
-          lexeme.substr(1, lexeme.size() - 1));
+          lexeme.substr(1, lexeme.size() - 2));
     default: return std::nullopt;
   }
 }
