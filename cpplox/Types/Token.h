@@ -69,15 +69,18 @@ class Token {
 
   Token(TokenType p_type, const char* p_lexeme);
 
-  auto toString() -> std::string;
-  auto getType() -> TokenType;
-  auto getLexeme() -> std::string;
+  [[nodiscard]] auto toString() const -> std::string;
+  [[nodiscard]] auto getType() const -> TokenType;
+  [[nodiscard]] auto getTypeString() const -> std::string;
+  [[nodiscard]] auto getLine() const -> int;
+  [[nodiscard]] auto getLexeme() const -> std::string;
+  [[nodiscard]] auto getOptionalLiteral() const -> OptionalLiteral;
 
  private:
-  TokenType type;
+  const TokenType type;
   const std::string lexeme;
   OptionalLiteral literal = std::nullopt;
-  int line = 1;
+  const int line = 1;
 };  // class Token
 
 }  // namespace cpplox::Types

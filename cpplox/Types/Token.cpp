@@ -2,6 +2,7 @@
 #include "cpplox/Types/Literal.h"
 
 #include <map>
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -72,7 +73,7 @@ Token::Token(TokenType p_type, const char* p_lexeme, OptionalLiteral p_literal,
 Token::Token(TokenType p_type, const char* p_lexeme)
     : type(p_type), lexeme(p_lexeme) {}
 
-auto Token::toString() -> std::string {
+auto Token::toString() const -> std::string {
   std::string result
       = std::to_string(line) + " " + TokenTypeString(type) + " " + lexeme + " ";
   result
@@ -80,7 +81,14 @@ auto Token::toString() -> std::string {
   return result;
 }
 
-auto Token::getType() -> TokenType { return type; }
-auto Token::getLexeme() -> std::string { return lexeme; }
+auto Token::getType() const -> TokenType { return this->type; }
+auto Token::getTypeString() const -> std::string {
+  return TokenTypeString(this->type);
+}
+auto Token::getLexeme() const -> std::string { return this->lexeme; };
+auto Token::getOptionalLiteral() const -> OptionalLiteral {
+  return this->literal;
+}
+auto Token::getLine() const -> int { return this->line; }
 
 }  // namespace cpplox::Types

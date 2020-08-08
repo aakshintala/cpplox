@@ -16,7 +16,7 @@ struct DoubleLiteral {
 using Literal = std::variant<std::string, DoubleLiteral>;
 using OptionalLiteral = std::optional<Literal>;
 
-auto getLiteralString(Literal& value) -> std::string;
+auto getLiteralString(const Literal& value) -> std::string;
 
 auto makeOptionalDoubleLiteral(double dVal, const std::string& lexeme)
     -> OptionalLiteral;

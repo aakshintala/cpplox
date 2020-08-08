@@ -2,7 +2,7 @@
 
 namespace cpplox::Types {
 
-auto getLiteralString(Literal& value) -> std::string {
+auto getLiteralString(const Literal& value) -> std::string {
   // Literal = std::variant<std::string, DoubleLiteral>;
   switch (value.index()) {
     case 0:  // string

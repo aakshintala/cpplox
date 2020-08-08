@@ -8,7 +8,9 @@ cc_library(
     hdrs = glob(["*.h"]),
     deps = [
         "//cpplox/AST:expressions",
+        "//cpplox/AST:pretty-printer",
         "//cpplox/ErrorsAndDebug:error-reporter",
+        "//cpplox/Parser:parser",
         "//cpplox/Scanner:scanner",
         "//cpplox/Types:types",
     ],
