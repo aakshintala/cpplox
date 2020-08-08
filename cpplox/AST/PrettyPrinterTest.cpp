@@ -16,14 +16,14 @@ TEST(PrettyPrinterTest, simple_expression) {
 
   // clang-format off
   ExprPtrVariant expr =
-    std::make_shared<BinaryExpr>(
-      std::make_shared<UnaryExpr>(
+    createBinaryEPV(
+      createUnaryEPV(
         Token(TokenType::MINUS, "-"),
-        std::make_shared<LiteralExpr>(makeOptionalDoubleLiteral(123, "123"))
+        createLiteralEPV(makeOptionalDoubleLiteral(123, "123"))
       ),
       Token(TokenType::STAR, "*"),
-      std::make_shared<GroupingExpr>(
-        std::make_shared<LiteralExpr>(makeOptionalDoubleLiteral(45.67, "45.67"))
+      createGroupingEPV(
+        createLiteralEPV(makeOptionalDoubleLiteral(45.67, "45.67"))
       )
     );
   // clang-format on

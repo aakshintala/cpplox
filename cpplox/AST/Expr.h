@@ -39,6 +39,14 @@ using UnaryExprPtr = std::shared_ptr<UnaryExpr>;
 using ExprPtrVariant = std::variant<BinaryExprPtr, GroupingExprPtr,
                                     LiteralExprPtr, UnaryExprPtr>;
 
+// Helper functions to create ExprPtrVariants for each Expr type
+auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
+    -> ExprPtrVariant;
+auto createUnaryEPV(Token op, ExprPtrVariant right) -> ExprPtrVariant;
+auto createGroupingEPV(ExprPtrVariant right) -> ExprPtrVariant;
+auto createLiteralEPV(OptionalLiteral literal) -> ExprPtrVariant;
+// auto createLiteralEPV(const std::string& str) -> ExprPtrVariant;
+
 struct BinaryExpr final : public Uncopyable,
                           public std::enable_shared_from_this<BinaryExpr> {
   ExprPtrVariant left;

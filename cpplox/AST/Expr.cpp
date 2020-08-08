@@ -16,4 +16,21 @@ LiteralExpr::LiteralExpr(OptionalLiteral value)
 UnaryExpr::UnaryExpr(Token op, ExprPtrVariant right)
     : op(std::move(op)), right(std::move(right)) {}
 
+auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
+    -> ExprPtrVariant {
+  return std::make_shared<BinaryExpr>(left, op, right);
+}
+
+auto createUnaryEPV(Token op, ExprPtrVariant right) -> ExprPtrVariant {
+  return std::make_shared<UnaryExpr>(op, right);
+}
+
+auto createGroupingEPV(ExprPtrVariant right) -> ExprPtrVariant {
+  return std::make_shared<GroupingExpr>(right);
+}
+
+auto createLiteralEPV(OptionalLiteral literal) -> ExprPtrVariant {
+  return std::make_shared<LiteralExpr>(literal);
+}
+
 }  // namespace cpplox::AST
