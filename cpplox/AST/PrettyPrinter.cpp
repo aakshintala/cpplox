@@ -10,7 +10,7 @@ PrettyPrinter::PrettyPrinter(ExprPtrVariant expression)
 
 namespace {
 auto parenthesize(const PrettyPrinter& printer, const std::string& name,
-                  std::initializer_list<ExprPtrVariant> exprs) {
+                  std::initializer_list<ExprPtrVariant> exprs) -> std::string {
   std::string result = "(";
   result += name;
   for (const auto& exprPtrVariant : exprs) {
@@ -41,6 +41,19 @@ auto printUnaryExpr(const PrettyPrinter& printer, const UnaryExprPtr& expr)
     -> std::string {
   return parenthesize(printer, expr->op.getLexeme(), {expr->right});
 }
+
+auto printConditionalExpr(const PrettyPrinter& printer,
+                          const ConditionalExprPtr& expr) -> std::string {
+  return parenthesize(printer,
+                      ": " + parenthesize(printer, "?", {expr->condition}),
+                      {expr->thenBranch, expr->elseBranch});
+}
+
+auto printPostfixExpr(const PrettyPrinter& printer, const PostfixExprPtr& expr)
+    -> std::string {
+  return parenthesize(printer, "POSTFIX " + expr->op.getLexeme(), {expr->left});
+}
+
 }  // namespace
 
 auto PrettyPrinter::toString() -> std::string { return toString(expression); }
@@ -51,22 +64,21 @@ auto PrettyPrinter::toString(const ExprPtrVariant& expression) const
   switch (expression.index()) {
     case 0:  // BinaryExprPtr
       return printBinaryExpr(*this, std::get<0>(expression));
-      break;
     case 1:  // GroupingExprPtr
       return printGroupingExpr(*this, std::get<1>(expression));
-      break;
     case 2:  // LiteralExprPtr
       return printLiteralExpr(*this, std::get<2>(expression));
-      break;
     case 3:  // UnaryExprPtr
       return printUnaryExpr(*this, std::get<3>(expression));
-      break;
+    case 4:  // ConditionalExprPtr
+      return printConditionalExpr(*this, std::get<4>(expression));
+    case 5:  // PostfixExprPtr
+      return printPostfixExpr(*this, std::get<5>(expression));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 4,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 6,
                     "Looks like you forgot to update the cases in "
                     "PrettyPrinter::toString(const ExptrVariant&)!");
       return "";
-      break;
   }
 }
 

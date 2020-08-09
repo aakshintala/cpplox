@@ -15,10 +15,10 @@ enum class TokenType {
   RIGHT_PAREN,
   LEFT_BRACE,
   RIGHT_BRACE,
+  COLON,
   COMMA,
   DOT,
-  MINUS,
-  PLUS,
+  QUESTION,
   SEMICOLON,
   SLASH,
   STAR,
@@ -32,6 +32,10 @@ enum class TokenType {
   GREATER_EQUAL,
   LESS,
   LESS_EQUAL,
+  MINUS,
+  MINUS_MINUS,
+  PLUS,
+  PLUS_PLUS,
 
   // Literals.
   IDENTIFIER,

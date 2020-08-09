@@ -38,7 +38,7 @@ auto RDParser::consumeOneOrMoreBinaryExpr(
 void RDParser::consumeOrError(TokenType tType,
                               const std::string& errorMessage) {
   if (getCurrentTokenType() == tType) return advance();
-  throw error(peek(), errorMessage);
+  throw error(errorMessage);
 }
 
 auto RDParser::consumeOneLiteral(const std::string& str) -> ExprPtrVariant {
@@ -51,8 +51,8 @@ auto RDParser::consumeOneLiteral(const Token& token) -> ExprPtrVariant {
   return AST::createLiteralEPV(token.getOptionalLiteral());
 }
 
-auto RDParser::error(const Token& token, const std::string& eMessage)
-    -> RDParser::RDParseError {
+auto RDParser::error(const std::string& eMessage) -> RDParser::RDParseError {
+  const Token& token = peek();
   std::string error = eMessage;
   if (token.getType() == TokenType::LOX_EOF)
     error = " at end: " + error;
@@ -70,6 +70,27 @@ auto RDParser::getTokenAndAdvance() -> Token {
   Token token = peek();
   advance();
   return token;
+}
+
+void RDParser::handleErrorProduction(
+    const std::initializer_list<Types::TokenType>& types, const parserFn& f) {
+  if (match(types)) {
+    auto errObj = error("Missing left hand operand");
+    advance();
+    ExprPtrVariant expr = std::invoke(f, this);
+    throw errObj;
+  }
+}
+
+void RDParser::handleErrorProductions() {
+  handleErrorProduction({TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL},
+                        &RDParser::equality);
+  handleErrorProduction({TokenType::GREATER, TokenType::GREATER_EQUAL,
+                         TokenType::LESS, TokenType::LESS_EQUAL},
+                        &RDParser::comparison);
+  handleErrorProduction({TokenType::PLUS}, &RDParser::addition);
+  handleErrorProduction({TokenType::STAR, TokenType::SLASH},
+                        &RDParser::multiplication);
 }
 
 auto RDParser::isAtEnd() const -> bool {
@@ -111,8 +132,33 @@ void RDParser::synchronize() {
 // This is a recursive descent parser.
 // The grammar for Lox is declared above each of the functions.
 
-// expression → equality;
-auto RDParser::expression() -> ExprPtrVariant { return equality(); }
+// expression → comma;
+auto RDParser::expression() -> ExprPtrVariant { return comma(); }
+
+// !This is going to cause some grief when we are looking at function arguments;
+// !fun(1,2) will be treated as fun((1,2)) <- a single argument instead of two.
+// !Needs to make sure we set function arguments to have higher precedence than
+// !the comma operator
+// comma → conditional ("," conditional)*
+auto RDParser::comma() -> ExprPtrVariant {
+  ExprPtrVariant expr = conditional();
+  expr = consumeOneOrMoreBinaryExpr({TokenType::COMMA}, expr,
+                                    &RDParser::conditional);
+  return expr;
+}
+
+// conditional → equality ("?" expression ":" conditional)?
+auto RDParser::conditional() -> ExprPtrVariant {
+  ExprPtrVariant expr = equality();
+  if (match(TokenType::QUESTION)) {
+    Token op = getTokenAndAdvance();
+    ExprPtrVariant thenBranch = expression();
+    consumeOrError(TokenType::COLON, "Expected a colon after ternary operator");
+    ExprPtrVariant elseBranch = conditional();
+    expr = AST::createConditionalEPV(expr, thenBranch, elseBranch);
+  }
+  return expr;
+}
 
 // equality   → comparison(("!=" | "==") comparison) *;
 auto RDParser::equality() -> ExprPtrVariant {
@@ -148,26 +194,42 @@ auto RDParser::multiplication() -> ExprPtrVariant {
   return expr;
 }
 
-// unary      → ("!" | "-") unary | primary;
+// unary      → ("!" | "-" | "--" | "++") unary | postfix;
 auto RDParser::unary() -> ExprPtrVariant {
-  auto unaryTypes = {TokenType::BANG_EQUAL, TokenType::MINUS};
+  auto unaryTypes = {TokenType::BANG_EQUAL, TokenType::MINUS,
+                     TokenType::PLUS_PLUS, TokenType::MINUS_MINUS};
   if (match(unaryTypes)) {
     Token op = getTokenAndAdvance();
     ExprPtrVariant right = unary();
     return AST::createUnaryEPV(op, right);
   }
-  return primary();
+  return postfix();
+}
+
+// postfix    → primary ("++" | "--")*;
+auto RDParser::postfix() -> ExprPtrVariant {
+  ExprPtrVariant expr = primary();
+  auto postfixTypes = {TokenType::PLUS_PLUS, TokenType::MINUS_MINUS};
+  while (match(postfixTypes)) {
+    Token op = getTokenAndAdvance();
+    expr = AST::createPostfixEPV(expr, op);
+  }
+  return expr;
 }
 
 // primary    → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")";
+// Error Productions:
+// primary    → ("!=" | "==") equality
+// primary    → (">" | ">=" | "<" | "<=") comparison
+// primary    → ("+")addition
+// primary    → ("/" | "*") multiplication;
 auto RDParser::primary() -> ExprPtrVariant {
-  TokenType tType = getCurrentTokenType();
-  if (tType == TokenType::FALSE) return consumeOneLiteral("false");
-  if (tType == TokenType::TRUE) return consumeOneLiteral("true");
-  if (tType == TokenType::NIL) return consumeOneLiteral("null");
-  if (tType == TokenType::NUMBER) return consumeOneLiteral(peek());
-  if (tType == TokenType::STRING) return consumeOneLiteral(peek());
-  if (tType == TokenType::LEFT_PAREN) {
+  if (match(TokenType::FALSE)) return consumeOneLiteral("false");
+  if (match(TokenType::TRUE)) return consumeOneLiteral("true");
+  if (match(TokenType::NIL)) return consumeOneLiteral("null");
+  if (match(TokenType::NUMBER)) return consumeOneLiteral(peek());
+  if (match(TokenType::STRING)) return consumeOneLiteral(peek());
+  if (match(TokenType::LEFT_PAREN)) {
     advance();
     ExprPtrVariant expr = expression();
     consumeOrError(TokenType::RIGHT_PAREN,
@@ -175,8 +237,11 @@ auto RDParser::primary() -> ExprPtrVariant {
                        + " Expected a closing paren after expression.");
     return AST::createGroupingEPV(expr);
   }
-  throw error(peek(), "Expected an expression; Got something else.");
-}
+  // Error Productions:
+  handleErrorProductions();
+
+  throw error("Expected an expression; Got something else.");
+}  // namespace cpplox::Parser
 
 auto RDParser::parse() -> std::optional<ExprPtrVariant> {
   try {

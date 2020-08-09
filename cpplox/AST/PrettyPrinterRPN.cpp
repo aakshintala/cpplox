@@ -35,6 +35,18 @@ auto printUnaryExpr(const PrettyPrinterRPN& printer, const UnaryExprPtr& expr)
   return printer.toString(expr->right) + " " + op;
 }
 
+auto printConditionalExpr(const PrettyPrinterRPN& printer,
+                          const ConditionalExprPtr& expr) -> std::string {
+  return printer.toString(expr->condition) + " "
+         + printer.toString(expr->thenBranch) + " "
+         + printer.toString(expr->elseBranch) + "  ?:";
+}
+
+auto printPostfixExpr(const PrettyPrinterRPN& printer,
+                      const PostfixExprPtr& expr) -> std::string {
+  return printer.toString(expr->left) + " " + expr->op.getLexeme();
+}
+
 }  // namespace
 
 auto PrettyPrinterRPN::toString() -> std::string {
@@ -47,22 +59,21 @@ auto PrettyPrinterRPN::toString(const ExprPtrVariant& expression) const
   switch (expression.index()) {
     case 0:  // BinaryExprPtr
       return printBinaryExpr(*this, std::get<0>(expression));
-      break;
     case 1:  // GroupingExprPtr
       return printGroupingExpr(*this, std::get<1>(expression));
-      break;
     case 2:  // LiteralExprPtr
       return printLiteralExpr(*this, std::get<2>(expression));
-      break;
     case 3:  // UnaryExprPtr
       return printUnaryExpr(*this, std::get<3>(expression));
-      break;
+    case 4:  // ConditionalExpr
+      return printConditionalExpr(*this, std::get<4>(expression));
+    case 5:  // PostfixExpr
+      return printPostfixExpr(*this, std::get<5>(expression));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 4,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 6,
                     "Looks like you forgot to update the cases in "
                     "PrettyPrinterRPN::toString(const ExptrVariant&)!");
       return "";
-      break;
   }
 }
 

@@ -25,8 +25,12 @@ class RDParser {
  private:
   // Exception type
   // Grammar production rules
-  // expression → equality;
+  // expression → comma;
   auto expression() -> ExprPtrVariant;
+  // comma → conditional ("," conditional)*
+  auto comma() -> ExprPtrVariant;
+  // conditional → equality ("?" expression ":" conditional)?
+  auto conditional() -> ExprPtrVariant;
   // equality   → comparison(("!=" | "==") comparison) *;
   auto equality() -> ExprPtrVariant;
   // comparison → addition((">" | ">=" | "<" | "<=") addition) *;
@@ -35,10 +39,15 @@ class RDParser {
   auto addition() -> ExprPtrVariant;
   // multi...   → unary(("/" | "*") unary) *;
   auto multiplication() -> ExprPtrVariant;
-  // unary      → ("!" | "-") unary | primary;
+  // unary      → ("!" | "-" | "--" | "++") unary | postfix;
   auto unary() -> ExprPtrVariant;
+  // postfix    → primary ("++" | "--")*;
+  auto postfix() -> ExprPtrVariant;
   // primary    → NUMBER | STRING | "false" | "true" | "nil" | "(" expression
   // ")";
+  // Error Productions:
+  // primary    → ("!=" | "==") equality | (">" | ">=" | "<" | "<=") comparison
+  //    | ("+")addition | ("/" | "*") multiplication;
   auto primary() -> ExprPtrVariant;
 
   // Helper functions to implement the parser
@@ -50,9 +59,12 @@ class RDParser {
       const ExprPtrVariant& expr, const parserFn& f) -> ExprPtrVariant;
   auto consumeOneLiteral(const std::string& str) -> ExprPtrVariant;
   auto consumeOneLiteral(const Token& token) -> ExprPtrVariant;
-  auto error(const Token& token, const std::string&) -> RDParseError;
+  auto error(const std::string& eMessage) -> RDParseError;
   [[nodiscard]] auto getCurrentTokenType() const -> TokenType;
   auto getTokenAndAdvance() -> Token;
+  void handleErrorProduction(
+      const std::initializer_list<Types::TokenType>& types, const parserFn& f);
+  void handleErrorProductions();
   [[nodiscard]] auto isAtEnd() const -> bool;
   [[nodiscard]] auto match(
       const std::initializer_list<Types::TokenType>& types) const -> bool;

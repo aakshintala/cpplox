@@ -161,9 +161,9 @@ void Scanner::tokenizeOne() {
     case '{': addToken(TokenType::LEFT_BRACE); break;
     case '}': addToken(TokenType::RIGHT_BRACE); break;
     case ',': addToken(TokenType::COMMA); break;
+    case ':': addToken(TokenType::COLON); break;
     case '.': addToken(TokenType::DOT); break;
-    case '-': addToken(TokenType::MINUS); break;
-    case '+': addToken(TokenType::PLUS); break;
+    case '?': addToken(TokenType::QUESTION); break;
     case ';': addToken(TokenType::SEMICOLON); break;
     case '*': addToken(TokenType::STAR); break;
     case '!':
@@ -177,6 +177,12 @@ void Scanner::tokenizeOne() {
       break;
     case '<':
       addToken(matchNext('=') ? TokenType::LESS_EQUAL : TokenType::LESS);
+      break;
+    case '-':
+      addToken(matchNext('-') ? TokenType::MINUS_MINUS : TokenType::MINUS);
+      break;
+    case '+':
+      addToken(matchNext('+') ? TokenType::PLUS_PLUS : TokenType::PLUS);
       break;
     case '/':
       if (matchNext('/'))
