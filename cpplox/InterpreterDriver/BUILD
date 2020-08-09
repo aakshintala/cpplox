@@ -1,25 +1,33 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "interpreter-driver",
-    srcs = glob(["*.cpp"]),
-    hdrs = glob(["*.h"]),
+    srcs = ["InterpreterDriver.cpp"],
+    hdrs = ["InterpreterDriver.h"],
     deps = [
         "//cpplox/AST:expressions",
         "//cpplox/AST:pretty-printer",
+        "//cpplox/ErrorsAndDebug:debug-print",
         "//cpplox/ErrorsAndDebug:error-reporter",
         "//cpplox/Parser:parser",
         "//cpplox/Scanner:scanner",
         "//cpplox/Types:types",
     ],
 )
-# cc_test(
-#     name = "interpreter-driver_test",
-#     srcs = "InterpreterDriverTest.cpp",
-#     deps = [
-#         ":interpreter-driver",
-#         "@googletest//:gtest_main",
-#     ],
-# )
+
+cc_test(
+    name = "interpreter-driver_test",
+    size = "small",
+    srcs = ["InterpreterDriverTest.cpp"],
+    data = [
+        "//sample-lox-programs:empty_file.lox",
+        "//sample-lox-programs:expressions/evaluate.lox",
+        "//sample-lox-programs:unexpected_character.lox",
+    ],
+    deps = [
+        ":interpreter-driver",
+        "@googletest//:gtest_main",
+    ],
+)
