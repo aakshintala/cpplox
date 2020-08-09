@@ -8,6 +8,12 @@ cc_library(
     hdrs = ["ErrorReporter.h"],
 )
 
+cc_library(
+    name = "debug-print",
+    srcs = ["DebugPrint.cpp"],
+    hdrs = ["DebugPrint.h"],
+)
+
 # cc_test(
 #     name = "error-reporter_test",
 #     srcs = "ErrorReporterTest.cpp",

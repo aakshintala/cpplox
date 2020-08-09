@@ -1,1 +1,1 @@
-build --cxxopt='-std=c++17'
+build --cxxopt='-std=c++17' --cxxopt='-D_CPPLOX_DEBUG_'
