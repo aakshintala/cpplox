@@ -10,44 +10,50 @@
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Types/Token.h"
 
+// This is a recursive descent parser for the lox language.
+// Currently it only parses expressions.
+
+// Grammar production rules:
+// expression → comma;
+// comma → conditional ("," conditional)*
+// conditional → equality ("?" expression ":" conditional)?
+// equality   → comparison(("!=" | "==") comparison) *;
+// comparison → addition((">" | ">=" | "<" | "<=") addition) *;
+// addition   → multiplication(("-" | "+") multiplication) *;
+// multi...   → unary(("/" | "*") unary) *;
+// unary      → ("!" | "-" | "--" | "++") unary | postfix;
+// postfix    → primary ("++" | "--")*;
+// primary    → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")";
+// Error Productions:
+// primary    → ("!=" | "==") equality
+// primary    → (">" | ">=" | "<" | "<=") comparison
+// primary    → ("+")addition
+// primary    → ("/" | "*") multiplication;
+
 namespace cpplox::Parser {
 using AST::ExprPtrVariant;
-// This is a recursive descent parser for the lox language. The grammar this
-// parser accepts is shown below.
 class RDParser {
  public:
   explicit RDParser(const std::vector<Types::Token>& tokens,
                     ErrorsAndDebug::ErrorReporter& eReporter);
 
-  class RDParseError : std::exception {};
+  class RDParseError : std::exception {};  // Exception types
+
+  // The public method to kick off parsing.
+  // Currently it's mainly used to catch any exceptions that may be produced
+  // (e.g., RDParseError) and deal with them.
   auto parse() -> std::optional<ExprPtrVariant>;
 
  private:
-  // Exception type
-  // Grammar production rules
-  // expression → comma;
   auto expression() -> ExprPtrVariant;
-  // comma → conditional ("," conditional)*
   auto comma() -> ExprPtrVariant;
-  // conditional → equality ("?" expression ":" conditional)?
   auto conditional() -> ExprPtrVariant;
-  // equality   → comparison(("!=" | "==") comparison) *;
   auto equality() -> ExprPtrVariant;
-  // comparison → addition((">" | ">=" | "<" | "<=") addition) *;
   auto comparison() -> ExprPtrVariant;
-  // addition   → multiplication(("-" | "+") multiplication) *;
   auto addition() -> ExprPtrVariant;
-  // multi...   → unary(("/" | "*") unary) *;
   auto multiplication() -> ExprPtrVariant;
-  // unary      → ("!" | "-" | "--" | "++") unary | postfix;
   auto unary() -> ExprPtrVariant;
-  // postfix    → primary ("++" | "--")*;
   auto postfix() -> ExprPtrVariant;
-  // primary    → NUMBER | STRING | "false" | "true" | "nil" | "(" expression
-  // ")";
-  // Error Productions:
-  // primary    → ("!=" | "==") equality | (">" | ">=" | "<" | "<=") comparison
-  //    | ("+")addition | ("/" | "*") multiplication;
   auto primary() -> ExprPtrVariant;
 
   // Helper functions to implement the parser
@@ -57,22 +63,25 @@ class RDParser {
   auto consumeOneOrMoreBinaryExpr(
       const std::initializer_list<Types::TokenType>& types,
       const ExprPtrVariant& expr, const parserFn& f) -> ExprPtrVariant;
+  auto consumeOneLiteral() -> ExprPtrVariant;
   auto consumeOneLiteral(const std::string& str) -> ExprPtrVariant;
-  auto consumeOneLiteral(const Token& token) -> ExprPtrVariant;
+  auto consumeGroupingExpr() -> ExprPtrVariant;
+  auto consumePostfixExpr(ExprPtrVariant expr) -> ExprPtrVariant;
+  auto consumeUnaryExpr() -> ExprPtrVariant;
   auto error(const std::string& eMessage) -> RDParseError;
   [[nodiscard]] auto getCurrentTokenType() const -> TokenType;
   auto getTokenAndAdvance() -> Token;
-  void handleErrorProduction(
-      const std::initializer_list<Types::TokenType>& types, const parserFn& f);
-  void handleErrorProductions();
   [[nodiscard]] auto isAtEnd() const -> bool;
   [[nodiscard]] auto match(
       const std::initializer_list<Types::TokenType>& types) const -> bool;
   [[nodiscard]] auto match(Types::TokenType type) const -> bool;
   [[nodiscard]] auto peek() const -> Token;
   void synchronize();
+  void throwOnErrorProduction(
+      const std::initializer_list<Types::TokenType>& types, const parserFn& f);
+  void throwOnErrorProductions();
 
-  // Private data
+  // The data the parser operates on.
   const std::vector<Types::Token>& tokens;
   std::__wrap_iter<std::vector<cpplox::Types::Token>::const_pointer>
       currentIter;

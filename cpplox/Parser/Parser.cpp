@@ -1,8 +1,8 @@
 #include "cpplox/Parser/Parser.h"
 
+#include <exception>
 #include <functional>
 #include <initializer_list>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -18,7 +18,7 @@ RDParser::RDParser(const std::vector<Token>& p_tokens,
   this->currentIter = this->tokens.begin();
 }
 
-// Helper functions
+// Helper functions; Sorted by name
 void RDParser::advance() {
   if (!isAtEnd()) ++currentIter;
 }
@@ -46,9 +46,33 @@ auto RDParser::consumeOneLiteral(const std::string& str) -> ExprPtrVariant {
   return AST::createLiteralEPV(str);
 }
 
-auto RDParser::consumeOneLiteral(const Token& token) -> ExprPtrVariant {
-  advance();
+auto RDParser::consumeOneLiteral() -> ExprPtrVariant {
+  const Token& token = getTokenAndAdvance();
   return AST::createLiteralEPV(token.getOptionalLiteral());
+}
+
+auto RDParser::consumeGroupingExpr() -> ExprPtrVariant {
+  advance();
+  ExprPtrVariant expr = expression();
+  consumeOrError(TokenType::RIGHT_PAREN,
+                 std::to_string(peek().getLine())
+                     + " Expected a closing paren after expression.");
+  return AST::createGroupingEPV(expr);
+}
+
+auto RDParser::consumePostfixExpr(ExprPtrVariant expr) -> ExprPtrVariant {
+  auto postfixTypes = {TokenType::PLUS_PLUS, TokenType::MINUS_MINUS};
+  while (match(postfixTypes)) {
+    Token op = getTokenAndAdvance();
+    expr = AST::createPostfixEPV(expr, op);
+  }
+  return expr;
+}
+
+auto RDParser::consumeUnaryExpr() -> ExprPtrVariant {
+  Token op = getTokenAndAdvance();
+  ExprPtrVariant right = unary();
+  return AST::createUnaryEPV(op, right);
 }
 
 auto RDParser::error(const std::string& eMessage) -> RDParser::RDParseError {
@@ -70,27 +94,6 @@ auto RDParser::getTokenAndAdvance() -> Token {
   Token token = peek();
   advance();
   return token;
-}
-
-void RDParser::handleErrorProduction(
-    const std::initializer_list<Types::TokenType>& types, const parserFn& f) {
-  if (match(types)) {
-    auto errObj = error("Missing left hand operand");
-    advance();
-    ExprPtrVariant expr = std::invoke(f, this);
-    throw errObj;
-  }
-}
-
-void RDParser::handleErrorProductions() {
-  handleErrorProduction({TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL},
-                        &RDParser::equality);
-  handleErrorProduction({TokenType::GREATER, TokenType::GREATER_EQUAL,
-                         TokenType::LESS, TokenType::LESS_EQUAL},
-                        &RDParser::comparison);
-  handleErrorProduction({TokenType::PLUS}, &RDParser::addition);
-  handleErrorProduction({TokenType::STAR, TokenType::SLASH},
-                        &RDParser::multiplication);
 }
 
 auto RDParser::isAtEnd() const -> bool {
@@ -128,9 +131,31 @@ void RDParser::synchronize() {
   }
 }
 
+void RDParser::throwOnErrorProduction(
+    const std::initializer_list<Types::TokenType>& types, const parserFn& f) {
+  if (match(types)) {
+    auto errObj = error("Missing left hand operand");
+    advance();
+    ExprPtrVariant expr = std::invoke(f, this);
+    throw errObj;
+  }
+}
+
+void RDParser::throwOnErrorProductions() {
+  throwOnErrorProduction({TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL},
+                         &RDParser::equality);
+  throwOnErrorProduction({TokenType::GREATER, TokenType::GREATER_EQUAL,
+                          TokenType::LESS, TokenType::LESS_EQUAL},
+                         &RDParser::comparison);
+  throwOnErrorProduction({TokenType::PLUS}, &RDParser::addition);
+  throwOnErrorProduction({TokenType::STAR, TokenType::SLASH},
+                         &RDParser::multiplication);
+}
+
 // ---------------- Grammar Production Rules -----------------------------------
 // This is a recursive descent parser.
 // The grammar for Lox is declared above each of the functions.
+// The functions are sorted based on lowest to highest precedence;
 
 // expression → comma;
 auto RDParser::expression() -> ExprPtrVariant { return comma(); }
@@ -198,23 +223,14 @@ auto RDParser::multiplication() -> ExprPtrVariant {
 auto RDParser::unary() -> ExprPtrVariant {
   auto unaryTypes = {TokenType::BANG_EQUAL, TokenType::MINUS,
                      TokenType::PLUS_PLUS, TokenType::MINUS_MINUS};
-  if (match(unaryTypes)) {
-    Token op = getTokenAndAdvance();
-    ExprPtrVariant right = unary();
-    return AST::createUnaryEPV(op, right);
-  }
+  if (match(unaryTypes)) return consumeUnaryExpr();
   return postfix();
 }
 
 // postfix    → primary ("++" | "--")*;
 auto RDParser::postfix() -> ExprPtrVariant {
   ExprPtrVariant expr = primary();
-  auto postfixTypes = {TokenType::PLUS_PLUS, TokenType::MINUS_MINUS};
-  while (match(postfixTypes)) {
-    Token op = getTokenAndAdvance();
-    expr = AST::createPostfixEPV(expr, op);
-  }
-  return expr;
+  return consumePostfixExpr(expr);
 }
 
 // primary    → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")";
@@ -227,26 +243,22 @@ auto RDParser::primary() -> ExprPtrVariant {
   if (match(TokenType::FALSE)) return consumeOneLiteral("false");
   if (match(TokenType::TRUE)) return consumeOneLiteral("true");
   if (match(TokenType::NIL)) return consumeOneLiteral("null");
-  if (match(TokenType::NUMBER)) return consumeOneLiteral(peek());
-  if (match(TokenType::STRING)) return consumeOneLiteral(peek());
-  if (match(TokenType::LEFT_PAREN)) {
-    advance();
-    ExprPtrVariant expr = expression();
-    consumeOrError(TokenType::RIGHT_PAREN,
-                   std::to_string(peek().getLine())
-                       + " Expected a closing paren after expression.");
-    return AST::createGroupingEPV(expr);
-  }
-  // Error Productions:
-  handleErrorProductions();
+  if (match(TokenType::NUMBER)) return consumeOneLiteral();
+  if (match(TokenType::STRING)) return consumeOneLiteral();
+  if (match(TokenType::LEFT_PAREN)) return consumeGroupingExpr();
 
+  // Check for known error productions. throws RDParseError;
+  throwOnErrorProductions();
+
+  // if none of the known error productions match,
+  // give up and throw generic RDParseError;
   throw error("Expected an expression; Got something else.");
-}  // namespace cpplox::Parser
+}
 
 auto RDParser::parse() -> std::optional<ExprPtrVariant> {
   try {
     return expression();
-  } catch (const RDParseError& e) {
+  } catch (const std::exception& e) {
     return std::nullopt;
   }
 }
