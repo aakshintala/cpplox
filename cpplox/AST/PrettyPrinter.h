@@ -4,7 +4,8 @@
 
 namespace cpplox::AST {
 
-struct PrettyPrinter {
+class PrettyPrinter {
+ public:
   explicit PrettyPrinter(ExprPtrVariant expression);
   auto toString() -> std::string;
   [[nodiscard]] auto toString(const ExprPtrVariant& expression) const
@@ -14,7 +15,8 @@ struct PrettyPrinter {
   ExprPtrVariant expression;
 };
 
-struct PrettyPrinterRPN {
+class PrettyPrinterRPN {
+ public:
   explicit PrettyPrinterRPN(ExprPtrVariant expression);
   auto toString() -> std::string;
   [[nodiscard]] auto toString(const ExprPtrVariant& expression) const
