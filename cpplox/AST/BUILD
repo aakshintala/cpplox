@@ -11,6 +11,7 @@ cc_library(
 
 cc_test(
     name = "expressions_test",
+    size = "small",
     srcs = ["ExprTest.cpp"],
     deps = [
         ":expressions",
@@ -33,6 +34,7 @@ cc_library(
 
 cc_test(
     name = "pretty-printer_test",
+    size = "small",
     srcs = ["PrettyPrinterTest.cpp"],
     deps = [
         ":expressions",
