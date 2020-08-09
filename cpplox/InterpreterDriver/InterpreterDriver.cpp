@@ -29,15 +29,20 @@ const int EXIT_DATAERR = 65;
 
 auto InterpreterDriver::runScript(const char* const scriptFile) -> int {
   const auto source = ([&]() -> std::string {
-    std::ifstream in(scriptFile, std::ios::in);
-    in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    return std::string{std::istreambuf_iterator<char>{in},
-                       std::istreambuf_iterator<char>{}};
+    try {
+      std::ifstream in(scriptFile, std::ios::in);
+      in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+      return std::string{std::istreambuf_iterator<char>{in},
+                         std::istreambuf_iterator<char>{}};
+    } catch (std::exception& e) {
+      debugPrint("Couldn't open Input source file.");
+      return "";
+    }
   })();
 
   if (source.empty()) return EXIT_DATAERR;
 
-  this->interpret(source);
+  this->runInterpreter(source);
 
   if (hadError) return EXIT_DATAERR;
   return 0;
@@ -52,7 +57,7 @@ void InterpreterDriver::runREPL() {
          "http://www.craftinginterpreters.com/"
       << std::endl;
   while (std::cout << "> " && std::getline(std::cin, line)) {
-    this->interpret(line);
+    this->runInterpreter(line);
     hadError = false;
   }
   std::cout << std::endl << "# Goodbye!" << std::endl;
@@ -96,13 +101,15 @@ auto parse(const std::vector<Token>& tokenVec)
 
 }  // namespace
 
-void InterpreterDriver::interpret(const std::string& source) {
+void InterpreterDriver::runInterpreter(const std::string& source) {
+  // First we have to tokenize the input source.
   std::list<Token> tokensList;
   if (!scan(source, tokensList)) {
     hadError = true;
     return;
   }
 
+  // Once we have the tokenized source, time to parse it!
   std::vector<Token> tokenVec(std::make_move_iterator(tokensList.begin()),
                               std::make_move_iterator(tokensList.end()));
 
@@ -111,6 +118,8 @@ void InterpreterDriver::interpret(const std::string& source) {
     hadError = true;
     return;
   }
+
+  // And, now we interpret it!
 }
 
 }  // namespace cpplox

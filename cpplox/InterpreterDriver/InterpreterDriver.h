@@ -12,7 +12,7 @@ struct InterpreterDriver {
   void runREPL();
 
  private:
-  void interpret(const std::string& source);
+  void runInterpreter(const std::string& source);
 
   bool hadError = false;
 };
