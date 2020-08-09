@@ -1,6 +1,10 @@
 #ifndef TYPES_UNCOPYABLE_H
 #define TYPES_UNCOPYABLE_H
 #pragma once
+
+// Types that derive from this class are 'uncopyable', i.e., their copy
+// constructors are deleted
+
 namespace cpplox::Types {
 
 struct Uncopyable {
