@@ -1,5 +1,6 @@
 #include "cpplox/InterpreterDriver/InterpreterDriver.h"
 
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -9,6 +10,7 @@
 
 #include "cpplox/AST/Expr.h"
 #include "cpplox/AST/PrettyPrinter.h"
+#include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Parser/Parser.h"
 #include "cpplox/Scanner/Scanner.h"
@@ -16,6 +18,7 @@
 
 namespace cpplox {
 
+using ErrorsAndDebug::debugPrint;
 using ErrorsAndDebug::ErrorReporter;
 using ErrorsAndDebug::LoxStatus;
 using Parser::RDParser;
@@ -24,13 +27,15 @@ using Types::TokenType;
 
 const int EXIT_DATAERR = 65;
 
-auto InterpreterDriver::runScript(const char* const script) -> int {
-  const auto source = ([&]() {
-    std::ifstream in(script, std::ifstream::in);
+auto InterpreterDriver::runScript(const char* const scriptFile) -> int {
+  const auto source = ([&]() -> std::string {
+    std::ifstream in(scriptFile, std::ios::in);
     in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     return std::string{std::istreambuf_iterator<char>{in},
                        std::istreambuf_iterator<char>{}};
   })();
+
+  if (source.empty()) return EXIT_DATAERR;
 
   this->interpret(source);
 
@@ -55,34 +60,44 @@ void InterpreterDriver::runREPL() {
 
 void InterpreterDriver::interpret(const std::string& source) {
   std::list<Token> tokensList;
-  ErrorReporter eReporter;
-  Scanner scanner(source, tokensList, eReporter);
+  ErrorReporter scannerEReporter;
+  Scanner scanner(source, tokensList, scannerEReporter);
   scanner.tokenize();
 
-  if (eReporter.getStatus() != LoxStatus::OK) {
+  if (scannerEReporter.getStatus() != LoxStatus::OK) {
     hadError = true;
-    eReporter.printToStdErr();
+    scannerEReporter.printToStdErr();
     return;
   }
 
-  std::cout << "Here are the tokens our scanner found:" << std::endl;
+  debugPrint("Here are the tokens our scanner found:");
   for (auto& token : tokensList) {
-    std::cout << token.toString() << std::endl;
+    debugPrint(token.toString());
   }
 
-  eReporter = ErrorReporter();
+  ErrorReporter parserEReporter = ErrorReporter();
   std::vector<Token> tokenVec(std::make_move_iterator(tokensList.begin()),
                               std::make_move_iterator(tokensList.end()));
-  RDParser parser(tokenVec, eReporter);
-  std::optional<AST::ExprPtrVariant> optionalExpr = parser.parse();
+  RDParser parser(tokenVec, parserEReporter);
 
-  if (eReporter.getStatus() != LoxStatus::OK || !optionalExpr.has_value()) {
+  std::optional<AST::ExprPtrVariant> optionalExpr = std::nullopt;
+  try {
+    optionalExpr = parser.parse();
+  } catch (const std::exception& e) {
+    std::string errorMessage = "Caught unhandled exception: ";
+    errorMessage += e.what();
+    debugPrint(errorMessage);
+  }
+
+  if (parserEReporter.getStatus() != LoxStatus::OK) {
     hadError = true;
-    eReporter.printToStdErr();
+    parserEReporter.printToStdErr();
+  } else if (!optionalExpr.has_value()) {
+    debugPrint("Parser returned nullopt.");
   } else {
     AST::PrettyPrinter printer(optionalExpr.value());
-    std::cout << "Here's the AST that was generated:" << std::endl;
-    std::cout << printer.toString() << std::endl;
+    debugPrint("Here's the AST that was generated:");
+    debugPrint(printer.toString());
   }
 }
 
