@@ -58,46 +58,58 @@ void InterpreterDriver::runREPL() {
   std::cout << std::endl << "# Goodbye!" << std::endl;
 }
 
-void InterpreterDriver::interpret(const std::string& source) {
-  std::list<Token> tokensList;
-  ErrorReporter scannerEReporter;
-  Scanner scanner(source, tokensList, scannerEReporter);
+namespace {
+
+auto scan(const std::string& source, std::list<Token>& tokensList) -> bool {
+  ErrorReporter eReporter;
+  Scanner scanner(source, tokensList, eReporter);
   scanner.tokenize();
 
-  if (scannerEReporter.getStatus() != LoxStatus::OK) {
-    hadError = true;
-    scannerEReporter.printToStdErr();
-    return;
+  if (eReporter.getStatus() != LoxStatus::OK) {
+    eReporter.printToStdErr();
+    return false;
+  }
+  return true;
+}
+
+auto parse(const std::vector<Token>& tokenVec)
+    -> std::optional<AST::ExprPtrVariant> {
+  ErrorReporter eReporter;
+  RDParser parser(tokenVec, eReporter);
+
+  std::optional<AST::ExprPtrVariant> optionalExpr = parser.parse();
+
+  if (eReporter.getStatus() != LoxStatus::OK) {
+    eReporter.printToStdErr();
   }
 
-  debugPrint("Here are the tokens our scanner found:");
-  for (auto& token : tokensList) {
-    debugPrint(token.toString());
-  }
-
-  ErrorReporter parserEReporter = ErrorReporter();
-  std::vector<Token> tokenVec(std::make_move_iterator(tokensList.begin()),
-                              std::make_move_iterator(tokensList.end()));
-  RDParser parser(tokenVec, parserEReporter);
-
-  std::optional<AST::ExprPtrVariant> optionalExpr = std::nullopt;
-  try {
-    optionalExpr = parser.parse();
-  } catch (const std::exception& e) {
-    std::string errorMessage = "Caught unhandled exception: ";
-    errorMessage += e.what();
-    debugPrint(errorMessage);
-  }
-
-  if (parserEReporter.getStatus() != LoxStatus::OK) {
-    hadError = true;
-    parserEReporter.printToStdErr();
-  } else if (!optionalExpr.has_value()) {
-    debugPrint("Parser returned nullopt.");
-  } else {
+  if (optionalExpr.has_value()) {
     AST::PrettyPrinter printer(optionalExpr.value());
     debugPrint("Here's the AST that was generated:");
     debugPrint(printer.toString());
+  } else {
+    debugPrint("Parser returned nullopt.");
+  }
+
+  return optionalExpr;
+}
+
+}  // namespace
+
+void InterpreterDriver::interpret(const std::string& source) {
+  std::list<Token> tokensList;
+  if (!scan(source, tokensList)) {
+    hadError = true;
+    return;
+  }
+
+  std::vector<Token> tokenVec(std::make_move_iterator(tokensList.begin()),
+                              std::make_move_iterator(tokensList.end()));
+
+  auto optionalExpr = parse(tokenVec);
+  if (!optionalExpr.has_value()) {
+    hadError = true;
+    return;
   }
 }
 

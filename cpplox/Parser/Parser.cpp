@@ -260,6 +260,11 @@ auto RDParser::parse() -> std::optional<ExprPtrVariant> {
     return expression();
   } catch (const RDParseError& e) {
     return std::nullopt;
+  } catch (const std::exception& e) {
+    std::string errorMessage = "Caught unhandled exception: ";
+    errorMessage += e.what();
+    eReporter.setError(peek().getLine(), errorMessage);
+    return std::nullopt;
   }
 }
 
