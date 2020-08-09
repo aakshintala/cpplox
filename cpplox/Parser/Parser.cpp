@@ -258,7 +258,7 @@ auto RDParser::primary() -> ExprPtrVariant {
 auto RDParser::parse() -> std::optional<ExprPtrVariant> {
   try {
     return expression();
-  } catch (const std::exception& e) {
+  } catch (const RDParseError& e) {
     return std::nullopt;
   }
 }
