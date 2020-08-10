@@ -60,7 +60,6 @@ auto PrettyPrinter::toString() -> std::string { return toString(expression); }
 
 auto PrettyPrinter::toString(const ExprPtrVariant& expression) const
     -> std::string {
-  // std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr>;
   switch (expression.index()) {
     case 0:  // BinaryExprPtr
       return printBinaryExpr(*this, std::get<0>(expression));
