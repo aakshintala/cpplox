@@ -6,5 +6,5 @@ TEST(LiteralExprPrintTest, emptyscript) {
   cpplox::Types::Literal literal = {"Testing LiteralExpr Printing"};
   cpplox::AST::LiteralExpr literalExpr(literal);
   EXPECT_EQ("Testing LiteralExpr Printing",
-            getLiteralString(literalExpr.literalVal.value()));
+            cpplox::Types::getLiteralString(literalExpr.literalVal.value()));
 }
