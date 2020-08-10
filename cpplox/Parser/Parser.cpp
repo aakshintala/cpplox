@@ -43,7 +43,7 @@ void RDParser::consumeOrError(TokenType tType,
 
 auto RDParser::consumeOneLiteral(const std::string& str) -> ExprPtrVariant {
   advance();
-  return AST::createLiteralEPV(str);
+  return AST::createLiteralEPV(Types::makeOptionalLiteral(str));
 }
 
 auto RDParser::consumeOneLiteral() -> ExprPtrVariant {
@@ -126,7 +126,10 @@ void RDParser::synchronize() {
       case TokenType::WHILE:
       case TokenType::PRINT:
       case TokenType::RETURN: return;
-      default: advance();
+      default:
+        ErrorsAndDebug::debugPrint("Discarding extranuous token:"
+                                   + peek().getLexeme());
+        advance();
     }
   }
 }
@@ -221,8 +224,8 @@ auto RDParser::multiplication() -> ExprPtrVariant {
 
 // unary      → ("!" | "-" | "--" | "++") unary | postfix;
 auto RDParser::unary() -> ExprPtrVariant {
-  auto unaryTypes = {TokenType::BANG_EQUAL, TokenType::MINUS,
-                     TokenType::PLUS_PLUS, TokenType::MINUS_MINUS};
+  auto unaryTypes = {TokenType::BANG, TokenType::MINUS, TokenType::PLUS_PLUS,
+                     TokenType::MINUS_MINUS};
   if (match(unaryTypes)) return consumeUnaryExpr();
   return postfix();
 }
@@ -242,7 +245,7 @@ auto RDParser::postfix() -> ExprPtrVariant {
 auto RDParser::primary() -> ExprPtrVariant {
   if (match(TokenType::FALSE)) return consumeOneLiteral("false");
   if (match(TokenType::TRUE)) return consumeOneLiteral("true");
-  if (match(TokenType::NIL)) return consumeOneLiteral("null");
+  if (match(TokenType::NIL)) return consumeOneLiteral("nil");
   if (match(TokenType::NUMBER)) return consumeOneLiteral();
   if (match(TokenType::STRING)) return consumeOneLiteral();
   if (match(TokenType::LEFT_PAREN)) return consumeGroupingExpr();

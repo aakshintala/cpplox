@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "cpplox/AST/Expr.h"
+#include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Types/Token.h"
 

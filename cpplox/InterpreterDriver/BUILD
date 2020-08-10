@@ -11,6 +11,7 @@ cc_library(
         "//cpplox/AST:pretty-printer",
         "//cpplox/ErrorsAndDebug:debug-print",
         "//cpplox/ErrorsAndDebug:error-reporter",
+        "//cpplox/Evaluator:evaluator",
         "//cpplox/Parser:parser",
         "//cpplox/Scanner:scanner",
         "//cpplox/Types:types",

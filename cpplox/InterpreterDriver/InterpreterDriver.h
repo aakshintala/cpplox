@@ -13,8 +13,8 @@ struct InterpreterDriver {
 
  private:
   void runInterpreter(const std::string& source);
-
   bool hadError = false;
+  bool hadRunTimeError = false;
 };
 
 }  // namespace cpplox

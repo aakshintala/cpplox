@@ -3,12 +3,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "parser",
-    srcs = glob(["*.cpp"]),
-    hdrs = glob(["*.h"]),
+    name = "evaluator",
+    srcs = ["Evaluator.cpp"],
+    hdrs = ["Evaluator.h"],
     deps = [
         "//cpplox/AST:expressions",
-        "//cpplox/ErrorsAndDebug:debug-print",
         "//cpplox/ErrorsAndDebug:error-reporter",
         "//cpplox/Types:types",
     ],

@@ -12,6 +12,7 @@
 #include "cpplox/AST/PrettyPrinter.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
+#include "cpplox/Evaluator/Evaluator.h"
 #include "cpplox/Parser/Parser.h"
 #include "cpplox/Scanner/Scanner.h"
 #include "cpplox/Types/Token.h"
@@ -26,6 +27,7 @@ using Types::Token;
 using Types::TokenType;
 
 const int EXIT_DATAERR = 65;
+const int EXIT_SOFTWARE = 70;
 
 auto InterpreterDriver::runScript(const char* const scriptFile) -> int {
   const auto source = ([&]() -> std::string {
@@ -45,6 +47,7 @@ auto InterpreterDriver::runScript(const char* const scriptFile) -> int {
   this->runInterpreter(source);
 
   if (hadError) return EXIT_DATAERR;
+  if (hadRunTimeError) return EXIT_SOFTWARE;
   return 0;
 }
 
@@ -59,6 +62,7 @@ void InterpreterDriver::runREPL() {
   while (std::cout << "> " && std::getline(std::cin, line)) {
     this->runInterpreter(line);
     hadError = false;
+    hadRunTimeError = false;
   }
   std::cout << std::endl << "# Goodbye!" << std::endl;
 }
@@ -74,6 +78,9 @@ auto scan(const std::string& source, std::list<Token>& tokensList) -> bool {
     eReporter.printToStdErr();
     return false;
   }
+  debugPrint("Here are the tokens the scanner recognized:");
+  for (auto& token : tokensList) debugPrint(token.toString());
+
   return true;
 }
 
@@ -120,6 +127,17 @@ void InterpreterDriver::runInterpreter(const std::string& source) {
   }
 
   // And, now we interpret it!
+  AST::ExprPtrVariant expr = optionalExpr.value();
+  ErrorReporter eReporter;
+  try {
+    Evaluator::Evaluator evaluator(expr, eReporter);
+    std::cout << Types::getValueString(evaluator.evaluate()) << std::endl;
+  } catch (const Evaluator::RuntimeError& e) {
+    if (eReporter.getStatus() != LoxStatus::OK) {
+      eReporter.printToStdErr();
+    }
+    hadRunTimeError = true;
+  }
 }
 
 }  // namespace cpplox
