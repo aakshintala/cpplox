@@ -8,7 +8,6 @@
 namespace cpplox {
 
 using ErrorsAndDebug::ErrorReporter;
-using Types::DoubleLiteral;
 using Types::Literal;
 using Types::OptionalLiteral;
 using Types::Token;
@@ -51,10 +50,9 @@ auto makeOptionalLiteral(TokenType t, const std::string& lexeme)
     -> OptionalLiteral {
   switch (t) {
     case TokenType::NUMBER:
-      return Types::makeOptionalDoubleLiteral(std::stod(lexeme), lexeme);
+      return Types::makeOptionalLiteral(std::stod(lexeme));
     case TokenType::STRING:
-      return Types::makeOptionalStringLiteral(
-          lexeme.substr(1, lexeme.size() - 2));
+      return Types::makeOptionalLiteral(lexeme.substr(1, lexeme.size() - 2));
     default: return std::nullopt;
   }
 }

@@ -19,11 +19,11 @@ TEST(PrettyPrinterTest, simple_expression) {
     createBinaryEPV(
       createUnaryEPV(
         Token(TokenType::MINUS, "-"),
-        createLiteralEPV(makeOptionalDoubleLiteral(123, "123"))
+        createLiteralEPV(makeOptionalLiteral(123.0))
       ),
       Token(TokenType::STAR, "*"),
       createGroupingEPV(
-        createLiteralEPV(makeOptionalDoubleLiteral(45.67, "45.67"))
+        createLiteralEPV(makeOptionalLiteral(45.67))
       )
     );
   // clang-format on

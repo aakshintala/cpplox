@@ -8,23 +8,14 @@
 
 namespace cpplox::Types {
 
-struct DoubleLiteral {
-  double value;
-  std::string stringLiteral;
-};
-
-using Literal = std::variant<std::string, DoubleLiteral>;
+using Literal = std::variant<std::string, double>;
 using OptionalLiteral = std::optional<Literal>;
 
 auto getLiteralString(const Literal& value) -> std::string;
 
-auto makeOptionalDoubleLiteral(double dVal, const std::string& lexeme)
-    -> OptionalLiteral;
+auto makeOptionalLiteral(double dVal) -> OptionalLiteral;
 
-auto makeOptionalDoubleLiteral(double dVal, const char* lexeme)
-    -> OptionalLiteral;
-
-auto makeOptionalStringLiteral(const std::string& lexeme) -> OptionalLiteral;
+auto makeOptionalLiteral(const std::string& lexeme) -> OptionalLiteral;
 
 }  // namespace cpplox::Types
 
