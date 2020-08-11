@@ -1,3 +1,7 @@
+// This file implements a Pretty Printer that prints in Reverse Polish notation.
+// I've retained the file as an example of how to do RPN printing, but it's no
+// longer maintained and is incomplete.
+
 #include "cpplox/AST/Expr.h"
 #include "cpplox/AST/PrettyPrinter.h"
 #include "cpplox/Types/Literal.h"
@@ -5,6 +9,18 @@
 #include <utility>
 
 namespace cpplox::AST {
+
+class PrettyPrinterRPN {
+ public:
+  explicit PrettyPrinterRPN(ExprPtrVariant expression);
+  auto toString() -> std::string;
+  [[nodiscard]] auto toString(const ExprPtrVariant& expression) const
+      -> std::string;
+
+ private:
+  ExprPtrVariant expression;
+};
+
 PrettyPrinterRPN::PrettyPrinterRPN(ExprPtrVariant expression)
     : expression(std::move(expression)) {}
 
