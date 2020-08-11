@@ -15,15 +15,4 @@ class PrettyPrinter {
   ExprPtrVariant expression;
 };
 
-class PrettyPrinterRPN {
- public:
-  explicit PrettyPrinterRPN(ExprPtrVariant expression);
-  auto toString() -> std::string;
-  [[nodiscard]] auto toString(const ExprPtrVariant& expression) const
-      -> std::string;
-
- private:
-  ExprPtrVariant expression;
-};
-
 }  // namespace cpplox::AST
