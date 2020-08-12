@@ -2,7 +2,6 @@
 #define CPPLOX_TYPES_VALUE_H
 #pragma once
 
-#include <optional>
 #include <string>
 #include <variant>
 
