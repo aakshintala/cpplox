@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "cpplox/AST/Expr.h"
+#include "cpplox/AST/Stmt.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Types/Token.h"
@@ -15,24 +16,37 @@
 // Currently it only parses expressions.
 
 // Grammar production rules:
-// expression → comma;
-// comma → conditional ("," conditional)*
-// conditional → equality ("?" expression ":" conditional)?
-// equality   → comparison(("!=" | "==") comparison) *;
-// comparison → addition((">" | ">=" | "<" | "<=") addition) *;
-// addition   → multiplication(("-" | "+") multiplication) *;
-// multi...   → unary(("/" | "*") unary) *;
-// unary      → ("!" | "-" | "--" | "++") unary | postfix;
-// postfix    → primary ("++" | "--")*;
-// primary    → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")";
+// program     → declaration* LOX_EOF;
+// declaration → varDecl | statement;
+// varDecl     → "var" IDENTIFIER ("=" expression)? ";" ;
+// statement   → exprStmt | printStmt | blockStmt;
+// exprStmt    → expression ';' ;
+// printStmt   → "print" expression ';' ;
+// blockStmt   → "{" declaration "}"
+// expression  → comma;
+// comma       → assignment ("," assignment)*;
+// assignment  → IDENTIFIER "=" assignment | condititional;
+// conditional → equality ("?" expression ":" conditional)?;
+// equality    → comparison(("!=" | "==") comparison) *;
+// comparison  → addition((">" | ">=" | "<" | "<=") addition) *;
+// addition    → multiplication(("-" | "+") multiplication) *;
+// multipli... → unary(("/" | "*") unary) *;
+// unary       → ("!" | "-" | "--" | "++") unary | postfix;
+// postfix     → primary ("++" | "--")*;
+// primary     → NUMBER | STRING | "false" | "true" | "nil";
+// primary     → "(" expression ")";
+// primary     → IDENTIFIER;
 // Error Productions:
-// primary    → ("!=" | "==") equality
-// primary    → (">" | ">=" | "<" | "<=") comparison
-// primary    → ("+")addition
-// primary    → ("/" | "*") multiplication;
+// primary     → ("!=" | "==") equality;
+// primary     → (">" | ">=" | "<" | "<=") comparison;
+// primary     → ("+")addition;
+// primary     → ("/" | "*") multiplication;
 
 namespace cpplox::Parser {
+
 using AST::ExprPtrVariant;
+using AST::StmtPtrVariant;
+
 class RDParser {
  public:
   explicit RDParser(const std::vector<Types::Token>& tokens,
@@ -41,13 +55,25 @@ class RDParser {
   class RDParseError : std::exception {};  // Exception types
 
   // The public method to kick off parsing.
+  // Stands in for "program" in the grammar
   // Currently it's mainly used to catch any exceptions that may be produced
   // (e.g., RDParseError) and deal with them.
-  auto parse() -> std::optional<ExprPtrVariant>;
+  auto parse() -> std::vector<StmtPtrVariant>;
 
  private:
+  // Grammar parsing functions
+  // Statment parsing
+  void program();
+  auto declaration() -> std::optional<StmtPtrVariant>;
+  auto varDecl() -> StmtPtrVariant;
+  auto statement() -> StmtPtrVariant;
+  auto exprStmt() -> StmtPtrVariant;
+  auto printStmt() -> StmtPtrVariant;
+  auto blockStmt() -> StmtPtrVariant;
+  // Expression Parsing
   auto expression() -> ExprPtrVariant;
   auto comma() -> ExprPtrVariant;
+  auto assignment() -> ExprPtrVariant;
   auto conditional() -> ExprPtrVariant;
   auto equality() -> ExprPtrVariant;
   auto comparison() -> ExprPtrVariant;
@@ -59,24 +85,28 @@ class RDParser {
 
   // Helper functions to implement the parser
   void advance();
-  void consumeOrError(TokenType tType, const std::string& errorMessage);
+  void consumeOrError(Types::TokenType tType, const std::string& errorMessage);
   using parserFn = ExprPtrVariant (RDParser::*)();
   auto consumeOneOrMoreBinaryExpr(
-      const std::initializer_list<Types::TokenType>& types,
-      const ExprPtrVariant& expr, const parserFn& f) -> ExprPtrVariant;
+      const std::initializer_list<Types::TokenType>& types, ExprPtrVariant expr,
+      const parserFn& f) -> ExprPtrVariant;
   auto consumeOneLiteral() -> ExprPtrVariant;
   auto consumeOneLiteral(const std::string& str) -> ExprPtrVariant;
   auto consumeGroupingExpr() -> ExprPtrVariant;
   auto consumePostfixExpr(ExprPtrVariant expr) -> ExprPtrVariant;
+  void consumeSemicolonOrError();
   auto consumeUnaryExpr() -> ExprPtrVariant;
+  auto consumeVarExpr() -> ExprPtrVariant;
   auto error(const std::string& eMessage) -> RDParseError;
-  [[nodiscard]] auto getCurrentTokenType() const -> TokenType;
-  auto getTokenAndAdvance() -> Token;
+  [[nodiscard]] auto getCurrentTokenType() const -> Types::TokenType;
+  auto getTokenAndAdvance() -> Types::Token;
+  auto getVarNameOrThrowError(const ExprPtrVariant& expr) -> Types::Token;
   [[nodiscard]] auto isAtEnd() const -> bool;
   [[nodiscard]] auto match(
       const std::initializer_list<Types::TokenType>& types) const -> bool;
   [[nodiscard]] auto match(Types::TokenType type) const -> bool;
-  [[nodiscard]] auto peek() const -> Token;
+  [[nodiscard]] auto peek() const -> Types::Token;
+  void reportError(const std::string& message);
   void synchronize();
   void throwOnErrorProduction(
       const std::initializer_list<Types::TokenType>& types, const parserFn& f);
@@ -87,6 +117,7 @@ class RDParser {
   std::__wrap_iter<std::vector<cpplox::Types::Token>::const_pointer>
       currentIter;
   ErrorsAndDebug::ErrorReporter& eReporter;
+  std::vector<StmtPtrVariant> statements;
 
 };  // class RDParser
 

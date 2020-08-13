@@ -1,16 +1,21 @@
-#ifndef CPPLOX_EVALUATOR_EVALUATOR__H
-#define CPPLOX_EVALUATOR_EVALUATOR__H
-#include <exception>
+#ifndef CPPLOX_EVALUATOR_EXPREVALUATOR__H
+#define CPPLOX_EVALUATOR_EXPREVALUATOR__H
 #pragma once
+
+// This base class is really kept around so the REPL can run really simple match
+// calculator style expressions
+
+#include <memory>
+#include <string>
 
 #include "cpplox/AST/Expr.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
-#include "cpplox/Types/Literal.h"
+#include "cpplox/Types/Token.h"
+#include "cpplox/Types/Uncopyable.h"
 #include "cpplox/Types/Value.h"
 
-#include <string>
-
 namespace cpplox::Evaluator {
+using AST::AssignmentExprPtr;
 using AST::BinaryExprPtr;
 using AST::ConditionalExprPtr;
 using AST::ExprPtrVariant;
@@ -18,21 +23,22 @@ using AST::GroupingExprPtr;
 using AST::LiteralExprPtr;
 using AST::PostfixExprPtr;
 using AST::UnaryExprPtr;
+using AST::VariableExprPtr;
+
 using ErrorsAndDebug::ErrorReporter;
+
 using Types::Literal;
 using Types::Token;
+using Types::TokenType;
 using Types::Value;
 
-class RuntimeError : std::exception {};
-
-class Evaluator : Uncopyable {
+class ExprEvaluator : Types::Uncopyable {
  public:
-  explicit Evaluator(ExprPtrVariant expression, ErrorReporter& eReporter);
-  auto evaluate() -> Value;
+  explicit ExprEvaluator(ErrorReporter& eReporter);
   auto evaluate(const ExprPtrVariant& expression) -> Value;
 
- private:
-  // evaluation functions for each type
+ protected:
+  // evaluation functions for Expr types
   auto evaluateBinaryExpr(const BinaryExprPtr& expr) -> Value;
   auto evaluateGroupingExpr(const GroupingExprPtr& expr) -> Value;
   static auto evaluateLiteralExpr(const LiteralExprPtr& expr) -> Value;
@@ -41,15 +47,14 @@ class Evaluator : Uncopyable {
   auto evaluatePostfixExpr(const PostfixExprPtr& expr) -> Value;
 
   // Helper functions
-  auto error(const Token& token, const std::string& message) -> RuntimeError;
-  auto getDoubleElseError(const Token& token, Value right) -> double;
-  static auto isTrue(const Value& value) -> bool;
-  static auto isEqual(const Value& left, const Value& right) -> bool;
+  // throws RuntimeError if right isn't a double
+  auto getDouble(const Token& token, Value right) -> double;
 
-  ExprPtrVariant expression;
+ private:
+  // Parsed data we're operating on.
   ErrorReporter& eReporter;
 };
 
 }  // namespace cpplox::Evaluator
 
-#endif  // CPPLOX_EVALUATOR_EVALUATOR__H
+#endif  // CPPLOX_EVALUATOR_EXPREVALUATOR__H

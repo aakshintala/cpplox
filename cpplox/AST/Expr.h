@@ -10,39 +10,40 @@
 #include "cpplox/Types/Token.h"
 #include "cpplox/Types/Uncopyable.h"
 
-namespace cpplox {
-
+namespace cpplox::AST {
 using Types::Literal;
 using Types::OptionalLiteral;
 using Types::Token;
 using Types::TokenType;
 using Types::Uncopyable;
 
-namespace AST {
-
-// Forward declare all the Expression Types so we can define their shared
-// pointer types and then the variant that holds all of those pointers.
+// Forward declare all the Expression Types so we can define their pointers
 struct BinaryExpr;
 struct GroupingExpr;
 struct LiteralExpr;
 struct UnaryExpr;
 struct ConditionalExpr;
 struct PostfixExpr;
+struct VariableExpr;
+struct AssignmentExpr;
 
-// Shared pointer sugar.
-using BinaryExprPtr = std::shared_ptr<BinaryExpr>;
-using GroupingExprPtr = std::shared_ptr<GroupingExpr>;
-using LiteralExprPtr = std::shared_ptr<LiteralExpr>;
-using UnaryExprPtr = std::shared_ptr<UnaryExpr>;
-using ConditionalExprPtr = std::shared_ptr<ConditionalExpr>;
-using PostfixExprPtr = std::shared_ptr<PostfixExpr>;
+// Unique_pointer sugar.
+using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
+using GroupingExprPtr = std::unique_ptr<GroupingExpr>;
+using LiteralExprPtr = std::unique_ptr<LiteralExpr>;
+using UnaryExprPtr = std::unique_ptr<UnaryExpr>;
+using ConditionalExprPtr = std::unique_ptr<ConditionalExpr>;
+using PostfixExprPtr = std::unique_ptr<PostfixExpr>;
+using VariableExprPtr = std::unique_ptr<VariableExpr>;
+using AssignmentExprPtr = std::unique_ptr<AssignmentExpr>;
 
 // The variant that we will use to pass around pointers to each of these
 // expression types. I'm exploring this so we don't have to rely on vTables for
 // dynamic dispatch on visitor functions.
 using ExprPtrVariant
     = std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr,
-                   ConditionalExprPtr, PostfixExprPtr>;
+                   ConditionalExprPtr, PostfixExprPtr, VariableExprPtr,
+                   AssignmentExprPtr>;
 
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
@@ -53,38 +54,34 @@ auto createLiteralEPV(OptionalLiteral literal) -> ExprPtrVariant;
 auto createConditionalEPV(ExprPtrVariant condition, ExprPtrVariant then,
                           ExprPtrVariant elseBranch) -> ExprPtrVariant;
 auto createPostfixEPV(ExprPtrVariant left, Token op) -> ExprPtrVariant;
+auto createVariableEPV(Token varName) -> ExprPtrVariant;
+auto createAssignmentEPV(Token varName, ExprPtrVariant expr) -> ExprPtrVariant;
 
 // Expression types;
-struct BinaryExpr final : public Uncopyable,
-                          public std::enable_shared_from_this<BinaryExpr> {
+struct BinaryExpr final : public Uncopyable {
   ExprPtrVariant left;
   Token op;
   ExprPtrVariant right;
   BinaryExpr(ExprPtrVariant left, Token op, ExprPtrVariant right);
 };
 
-struct GroupingExpr final : public Uncopyable,
-                            public std::enable_shared_from_this<GroupingExpr> {
+struct GroupingExpr final : public Uncopyable {
   ExprPtrVariant expression;
   explicit GroupingExpr(ExprPtrVariant expression);
 };
 
-struct LiteralExpr final : public Uncopyable,
-                           public std::enable_shared_from_this<LiteralExpr> {
+struct LiteralExpr final : public Uncopyable {
   OptionalLiteral literalVal;
   explicit LiteralExpr(OptionalLiteral value);
 };
 
-struct UnaryExpr final : public Uncopyable,
-                         public std::enable_shared_from_this<UnaryExpr> {
+struct UnaryExpr final : public Uncopyable {
   Token op;
   ExprPtrVariant right;
   UnaryExpr(Token op, ExprPtrVariant right);
 };
 
-struct ConditionalExpr final
-    : public Uncopyable,
-      public std::enable_shared_from_this<ConditionalExpr> {
+struct ConditionalExpr final : public Uncopyable {
   ExprPtrVariant condition;
   ExprPtrVariant thenBranch;
   ExprPtrVariant elseBranch;
@@ -92,13 +89,22 @@ struct ConditionalExpr final
                   ExprPtrVariant elseBranch);
 };
 
-struct PostfixExpr final : public Uncopyable,
-                           public std::enable_shared_from_this<PostfixExpr> {
+struct PostfixExpr final : public Uncopyable {
   ExprPtrVariant left;
   Token op;
   PostfixExpr(ExprPtrVariant left, Token op);
 };
 
-}  // namespace AST
-}  // namespace cpplox
+struct VariableExpr final : public Uncopyable {
+  Token varName;
+  explicit VariableExpr(Token varName);
+};
+
+struct AssignmentExpr final : public Uncopyable {
+  Token varName;
+  ExprPtrVariant right;
+  AssignmentExpr(Token varName, ExprPtrVariant right);
+};
+
+}  // namespace cpplox::AST
 #endif  // CPPLOX_AST_EXPR_H

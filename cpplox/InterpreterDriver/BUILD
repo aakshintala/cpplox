@@ -7,7 +7,7 @@ cc_library(
     srcs = ["InterpreterDriver.cpp"],
     hdrs = ["InterpreterDriver.h"],
     deps = [
-        "//cpplox/AST:expressions",
+        "//cpplox/AST:ASTNodes",
         "//cpplox/AST:pretty-printer",
         "//cpplox/ErrorsAndDebug:debug-print",
         "//cpplox/ErrorsAndDebug:error-reporter",

@@ -7,7 +7,7 @@ cc_library(
     srcs = glob(["*.cpp"]),
     hdrs = glob(["*.h"]),
     deps = [
-        "//cpplox/AST:expressions",
+        "//cpplox/AST:ASTNodes",
         "//cpplox/ErrorsAndDebug:debug-print",
         "//cpplox/ErrorsAndDebug:error-reporter",
         "//cpplox/Types:types",

@@ -3,16 +3,19 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
-#include <list>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "cpplox/AST/Expr.h"
 #include "cpplox/AST/PrettyPrinter.h"
+#include "cpplox/AST/Stmt.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
-#include "cpplox/Evaluator/Evaluator.h"
+#include "cpplox/ErrorsAndDebug/RuntimeError.h"
+#include "cpplox/Evaluator/ExprEvaluator.h"
+#include "cpplox/Evaluator/StmtExprEvaluator.h"
 #include "cpplox/Parser/Parser.h"
 #include "cpplox/Scanner/Scanner.h"
 #include "cpplox/Types/Token.h"
@@ -69,74 +72,71 @@ void InterpreterDriver::runREPL() {
 
 namespace {
 
-auto scan(const std::string& source, std::list<Token>& tokensList) -> bool {
+class InterpreterError : std::exception {};
+
+auto scan(const std::string& source) -> std::vector<Token> {
   ErrorReporter eReporter;
-  Scanner scanner(source, tokensList, eReporter);
-  scanner.tokenize();
+  Scanner scanner(source, eReporter);
+
+  std::vector<Token> tokensVec = scanner.tokenize();
 
   if (eReporter.getStatus() != LoxStatus::OK) {
     eReporter.printToStdErr();
-    return false;
+    throw InterpreterError();
   }
+#ifdef SCANNER_DEBUG
   debugPrint("Here are the tokens the scanner recognized:");
-  for (auto& token : tokensList) debugPrint(token.toString());
+  for (auto& token : tokensVec) debugPrint(token.toString());
+#endif  // SCANNER_DEBUG
 
-  return true;
+  return tokensVec;
 }
 
 auto parse(const std::vector<Token>& tokenVec)
-    -> std::optional<AST::ExprPtrVariant> {
+    -> std::vector<AST::StmtPtrVariant> {
   ErrorReporter eReporter;
   RDParser parser(tokenVec, eReporter);
 
-  std::optional<AST::ExprPtrVariant> optionalExpr = parser.parse();
+  std::vector<AST::StmtPtrVariant> statements = parser.parse();
 
   if (eReporter.getStatus() != LoxStatus::OK) {
     eReporter.printToStdErr();
+    throw InterpreterError();
   }
 
-  if (optionalExpr.has_value()) {
-    AST::PrettyPrinter printer(optionalExpr.value());
+#ifdef PARSER_DEBUG
+  if (!statements.empty()) {
+    AST::PrettyPrinter printer(statements);
     debugPrint("Here's the AST that was generated:");
-    debugPrint(printer.toString());
+    for (const auto& str : printer.toString()) debugPrint(str);
   } else {
-    debugPrint("Parser returned nullopt.");
+    debugPrint("Parser returned no valid statements.");
   }
+#endif  // PARSER_DEBUG
 
-  return optionalExpr;
+  return statements;
 }
 
 }  // namespace
 
 void InterpreterDriver::runInterpreter(const std::string& source) {
   // First we have to tokenize the input source.
-  std::list<Token> tokensList;
-  if (!scan(source, tokensList)) {
-    hadError = true;
-    return;
-  }
-
-  // Once we have the tokenized source, time to parse it!
-  std::vector<Token> tokenVec(std::make_move_iterator(tokensList.begin()),
-                              std::make_move_iterator(tokensList.end()));
-
-  auto optionalExpr = parse(tokenVec);
-  if (!optionalExpr.has_value()) {
-    hadError = true;
-    return;
-  }
-
-  // And, now we interpret it!
-  AST::ExprPtrVariant expr = optionalExpr.value();
   ErrorReporter eReporter;
   try {
-    Evaluator::Evaluator evaluator(expr, eReporter);
-    std::cout << Types::getValueString(evaluator.evaluate()) << std::endl;
-  } catch (const Evaluator::RuntimeError& e) {
+    Evaluator::StmtExprEvaluator evaluator(parse(scan(source)), eReporter);
+    evaluator.evaluate();
     if (eReporter.getStatus() != LoxStatus::OK) {
       eReporter.printToStdErr();
     }
+  } catch (const InterpreterError& e) {
+    hadError = true;
+    return;
+  } catch (const ErrorsAndDebug::RuntimeError& e) {
     hadRunTimeError = true;
+    if (eReporter.getStatus() != LoxStatus::OK) {
+      eReporter.printToStdErr();
+    }
+    return;
   }
 }
 

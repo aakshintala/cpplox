@@ -59,9 +59,8 @@ auto makeOptionalLiteral(TokenType t, const std::string& lexeme)
 
 }  // namespace
 
-Scanner::Scanner(const std::string& p_source, std::list<Token>& p_tokens,
-                 ErrorReporter& p_eReporter)
-    : source(p_source), tokens(p_tokens), eReporter(p_eReporter) {}
+Scanner::Scanner(const std::string& p_source, ErrorReporter& p_eReporter)
+    : source(p_source), eReporter(p_eReporter) {}
 
 void Scanner::addToken(TokenType t) {
   const std::string lexeme = getLexeme(source, start, current - start);
@@ -142,14 +141,6 @@ auto Scanner::peekNext() -> char {
   return source[current + 1];
 }
 
-void Scanner::tokenize() {
-  while (!isAtEnd()) {
-    start = current;
-    tokenizeOne();
-  }
-  tokens.emplace_back(TokenType::LOX_EOF, "", std::nullopt, line);
-}
-
 void Scanner::tokenizeOne() {
   char c = peek();
   advance();
@@ -214,6 +205,17 @@ void Scanner::tokenizeOne() {
       }
       break;
   }
+}
+
+auto Scanner::tokenize() -> std::vector<Token> {
+  while (!isAtEnd()) {
+    start = current;
+    tokenizeOne();
+  }
+  tokens.emplace_back(TokenType::LOX_EOF, "", std::nullopt, line);
+  std::vector<Token> tokensVec;
+  std::move(tokens.begin(), tokens.end(), std::back_inserter(tokensVec));
+  return tokensVec;
 }
 
 }  // namespace cpplox

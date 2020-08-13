@@ -14,6 +14,16 @@ cc_library(
     hdrs = ["DebugPrint.h"],
 )
 
+cc_library(
+    name = "runtime-error",
+    srcs = ["RuntimeError.cpp"],
+    hdrs = ["RuntimeError.h"],
+    deps = [
+        ":error-reporter",
+        "//cpplox/Types:types",
+    ],
+)
+
 # cc_test(
 #     name = "error-reporter_test",
 #     srcs = "ErrorReporterTest.cpp",

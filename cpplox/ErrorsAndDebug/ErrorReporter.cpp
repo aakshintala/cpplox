@@ -13,7 +13,6 @@ void ErrorReporter::setError(int line, const std::string& message) {
 auto ErrorReporter::getStatus() -> LoxStatus { return status; }
 
 void ErrorReporter::printToStdErr() {
-  std::cerr << "Oh-Oh, Your Lox code appears to contain errors!" << std::endl;
   for (auto& s : errorMessages) {
     std::cerr << s << std::endl;
   }

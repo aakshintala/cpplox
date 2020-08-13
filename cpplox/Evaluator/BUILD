@@ -4,11 +4,20 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "evaluator",
-    srcs = ["Evaluator.cpp"],
-    hdrs = ["Evaluator.h"],
+    srcs = [
+        "Environment.cpp",
+        "ExprEvaluator.cpp",
+        "StmtExprEvaluator.cpp",
+    ],
+    hdrs = [
+        "Environment.h",
+        "ExprEvaluator.h",
+        "StmtExprEvaluator.h",
+    ],
     deps = [
-        "//cpplox/AST:expressions",
+        "//cpplox/AST:ASTNodes",
         "//cpplox/ErrorsAndDebug:error-reporter",
+        "//cpplox/ErrorsAndDebug:runtime-error",
         "//cpplox/Types:types",
     ],
 )

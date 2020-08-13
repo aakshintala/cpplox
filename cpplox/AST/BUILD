@@ -3,31 +3,34 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "expressions",
-    srcs = ["Expr.cpp"],
-    hdrs = ["Expr.h"],
+    name = "ASTNodes",
+    srcs = [
+        "Expr.cpp",
+        "Stmt.cpp",
+    ],
+    hdrs = [
+        "Expr.h",
+        "Stmt.h",
+    ],
     deps = ["//cpplox/Types:types"],
 )
 
 cc_test(
-    name = "expressions_test",
+    name = "ASTNodes_test",
     size = "small",
     srcs = ["ExprTest.cpp"],
     deps = [
-        ":expressions",
+        ":ASTNodes",
         "@googletest//:gtest_main",
     ],
 )
 
 cc_library(
     name = "pretty-printer",
-    srcs = [
-        "PrettyPrinter.cpp",
-        "PrettyPrinterRPN.cpp",
-    ],
+    srcs = ["PrettyPrinter.cpp"],
     hdrs = ["PrettyPrinter.h"],
     deps = [
-        ":expressions",
+        ":ASTNodes",
         "//cpplox/Types:types",
     ],
 )
@@ -37,7 +40,7 @@ cc_test(
     size = "small",
     srcs = ["PrettyPrinterTest.cpp"],
     deps = [
-        ":expressions",
+        ":ASTNodes",
         ":pretty-printer",
         "@googletest//:gtest_main",
     ],

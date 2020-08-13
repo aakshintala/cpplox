@@ -1,6 +1,7 @@
 #include "cpplox/AST/Expr.h"
 
 #include <initializer_list>
+#include <memory>
 #include <utility>
 
 namespace cpplox::AST {
@@ -27,30 +28,44 @@ ConditionalExpr::ConditionalExpr(ExprPtrVariant condition,
 PostfixExpr::PostfixExpr(ExprPtrVariant left, Token op)
     : left(std::move(left)), op(std::move(op)) {}
 
+VariableExpr::VariableExpr(Token varName) : varName(std::move(varName)) {}
+
+AssignmentExpr::AssignmentExpr(Token varName, ExprPtrVariant right)
+    : varName(std::move(varName)), right(std::move(right)) {}
+
 auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
     -> ExprPtrVariant {
-  return std::make_shared<BinaryExpr>(left, op, right);
+  return std::make_unique<BinaryExpr>(std::move(left), op, std::move(right));
 }
 
 auto createUnaryEPV(Token op, ExprPtrVariant right) -> ExprPtrVariant {
-  return std::make_shared<UnaryExpr>(op, right);
+  return std::make_unique<UnaryExpr>(op, std::move(right));
 }
 
 auto createGroupingEPV(ExprPtrVariant right) -> ExprPtrVariant {
-  return std::make_shared<GroupingExpr>(right);
+  return std::make_unique<GroupingExpr>(std::move(right));
 }
 
 auto createLiteralEPV(OptionalLiteral literal) -> ExprPtrVariant {
-  return std::make_shared<LiteralExpr>(literal);
+  return std::make_unique<LiteralExpr>(std::move(literal));
 }
 
 auto createConditionalEPV(ExprPtrVariant condition, ExprPtrVariant then,
                           ExprPtrVariant elseBranch) -> ExprPtrVariant {
-  return std::make_shared<ConditionalExpr>(condition, then, elseBranch);
+  return std::make_unique<ConditionalExpr>(
+      std::move(condition), std::move(then), std::move(elseBranch));
 }
 
 auto createPostfixEPV(ExprPtrVariant left, Token op) -> ExprPtrVariant {
-  return std::make_shared<PostfixExpr>(left, op);
+  return std::make_unique<PostfixExpr>(std::move(left), op);
+}
+
+auto createVariableEPV(Token varName) -> ExprPtrVariant {
+  return std::make_unique<VariableExpr>(varName);
+}
+
+auto createAssignmentEPV(Token varName, ExprPtrVariant expr) -> ExprPtrVariant {
+  return std::make_unique<AssignmentExpr>(varName, std::move(expr));
 }
 
 }  // namespace cpplox::AST
