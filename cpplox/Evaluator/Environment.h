@@ -4,6 +4,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Types/Token.h"
@@ -18,7 +19,7 @@ class EnvironmentManager : public Types::Uncopyable {
   explicit EnvironmentManager(ErrorReporter& eReporter);
   void createNewEnviron();
   void discardCurrentEnviron();
-  void define(const Types::Token& varToken, const Types::Value& value);
+  void define(const Types::Token& varToken, std::optional<Types::Value> value);
   void assign(const Types::Token& varToken, const Types::Value& value);
   auto get(const Types::Token& varToken) -> Types::Value;
 
@@ -34,13 +35,14 @@ class EnvironmentManager : public Types::Uncopyable {
 
     auto assign(const Types::Token& varToken, const Types::Value& value)
         -> bool;
-    void define(const Types::Token& varToken, const Types::Value& value);
+    void define(const Types::Token& varToken,
+                std::optional<Types::Value> value);
     auto get(const Types::Token& varToken) -> Types::Value;
     auto isGlobal() -> bool;
     auto releaseParentEnv() -> EnvironmentPtr;
 
    private:
-    std::map<std::string, Types::Value> values;
+    std::map<std::string, std::optional<Types::Value> > values;
     ErrorReporter& eReporter;
     EnvironmentPtr parentEnviron = nullptr;
   };

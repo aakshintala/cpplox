@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 
@@ -208,9 +209,10 @@ void Evaluator::evaluateBlockStmtPtr(const BlockStmtPtr& stmt) {
 
 void Evaluator::evaluateVarStmtPtr(const VarStmtPtr& stmt) {
   if (stmt->initializer.has_value()) {
-    environManager.define(stmt->varName, evaluate(stmt->initializer.value()));
+    environManager.define(
+        stmt->varName, std::make_optional(evaluate(stmt->initializer.value())));
   } else {
-    environManager.define(stmt->varName, Value(nullptr));
+    environManager.define(stmt->varName, std::nullopt);
   }
 }
 
