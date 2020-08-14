@@ -4,15 +4,23 @@
 
 #include <string>
 
+#include "cpplox/ErrorsAndDebug/ErrorReporter.h"
+#include "cpplox/Evaluator/Evaluator.h"
+
 namespace cpplox {
 
 struct InterpreterDriver {
  public:
+  InterpreterDriver();
   auto runScript(const char* script) -> int;
   void runREPL();
 
  private:
-  void runInterpreter(const std::string& source);
+  void interpret(const std::string& source);
+
+  ErrorsAndDebug::ErrorReporter eReporter;
+  Evaluator::Evaluator evaluator;
+
   bool hadError = false;
   bool hadRunTimeError = false;
 };

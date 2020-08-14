@@ -6,6 +6,10 @@ cc_library(
     name = "interpreter-driver",
     srcs = ["InterpreterDriver.cpp"],
     hdrs = ["InterpreterDriver.h"],
+    copts = [
+        # "-DPARSER_DEBUG",
+        # "-DSCANNER_DEBUG",
+    ],
     deps = [
         "//cpplox/AST:ASTNodes",
         "//cpplox/AST:pretty-printer",

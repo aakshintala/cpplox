@@ -6,13 +6,11 @@ cc_library(
     name = "evaluator",
     srcs = [
         "Environment.cpp",
-        "ExprEvaluator.cpp",
-        "StmtExprEvaluator.cpp",
+        "Evaluator.cpp",
     ],
     hdrs = [
         "Environment.h",
-        "ExprEvaluator.h",
-        "StmtExprEvaluator.h",
+        "Evaluator.h",
     ],
     deps = [
         "//cpplox/AST:ASTNodes",

@@ -12,10 +12,7 @@
 #include "cpplox/AST/PrettyPrinter.h"
 #include "cpplox/AST/Stmt.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
-#include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
-#include "cpplox/Evaluator/ExprEvaluator.h"
-#include "cpplox/Evaluator/StmtExprEvaluator.h"
 #include "cpplox/Parser/Parser.h"
 #include "cpplox/Scanner/Scanner.h"
 #include "cpplox/Types/Token.h"
@@ -47,7 +44,7 @@ auto InterpreterDriver::runScript(const char* const scriptFile) -> int {
 
   if (source.empty()) return EXIT_DATAERR;
 
-  this->runInterpreter(source);
+  this->interpret(source);
 
   if (hadError) return EXIT_DATAERR;
   if (hadRunTimeError) return EXIT_SOFTWARE;
@@ -63,7 +60,7 @@ void InterpreterDriver::runREPL() {
          "http://www.craftinginterpreters.com/"
       << std::endl;
   while (std::cout << "> " && std::getline(std::cin, line)) {
-    this->runInterpreter(line);
+    this->interpret(line);
     hadError = false;
     hadRunTimeError = false;
   }
@@ -119,12 +116,9 @@ auto parse(const std::vector<Token>& tokenVec)
 
 }  // namespace
 
-void InterpreterDriver::runInterpreter(const std::string& source) {
-  // First we have to tokenize the input source.
-  ErrorReporter eReporter;
+void InterpreterDriver::interpret(const std::string& source) {
   try {
-    Evaluator::StmtExprEvaluator evaluator(parse(scan(source)), eReporter);
-    evaluator.evaluate();
+    evaluator.evaluate(parse(scan(source)));
     if (eReporter.getStatus() != LoxStatus::OK) {
       eReporter.printToStdErr();
     }
@@ -139,5 +133,7 @@ void InterpreterDriver::runInterpreter(const std::string& source) {
     return;
   }
 }
+
+InterpreterDriver::InterpreterDriver() : eReporter(), evaluator(eReporter) {}
 
 }  // namespace cpplox
