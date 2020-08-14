@@ -7,7 +7,6 @@
 
 namespace cpplox::Types {
 
-enum class ValVarEnum { STRING, DOUBLE, BOOL, NIL, LAST_VAL };
 using Value = std::variant<std::string, double, bool, std::nullptr_t>;
 
 auto areEqual(const Value& left, const Value& right) -> bool;
