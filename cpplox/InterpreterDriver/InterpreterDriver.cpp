@@ -118,6 +118,7 @@ auto parse(const std::vector<Token>& tokenVec)
 
 void InterpreterDriver::interpret(const std::string& source) {
   try {
+    eReporter.clearErrors();
     evaluator.evaluate(parse(scan(source)));
     if (eReporter.getStatus() != LoxStatus::OK) {
       eReporter.printToStdErr();
