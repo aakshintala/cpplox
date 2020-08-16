@@ -26,6 +26,7 @@ struct ConditionalExpr;
 struct PostfixExpr;
 struct VariableExpr;
 struct AssignmentExpr;
+struct LogicalExpr;
 
 // Unique_pointer sugar.
 using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
@@ -36,6 +37,7 @@ using ConditionalExprPtr = std::unique_ptr<ConditionalExpr>;
 using PostfixExprPtr = std::unique_ptr<PostfixExpr>;
 using VariableExprPtr = std::unique_ptr<VariableExpr>;
 using AssignmentExprPtr = std::unique_ptr<AssignmentExpr>;
+using LogicalExprPtr = std::unique_ptr<LogicalExpr>;
 
 // The variant that we will use to pass around pointers to each of these
 // expression types. I'm exploring this so we don't have to rely on vTables for
@@ -43,7 +45,7 @@ using AssignmentExprPtr = std::unique_ptr<AssignmentExpr>;
 using ExprPtrVariant
     = std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr,
                    ConditionalExprPtr, PostfixExprPtr, VariableExprPtr,
-                   AssignmentExprPtr>;
+                   AssignmentExprPtr, LogicalExprPtr>;
 
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
@@ -56,6 +58,8 @@ auto createConditionalEPV(ExprPtrVariant condition, ExprPtrVariant then,
 auto createPostfixEPV(ExprPtrVariant left, Token op) -> ExprPtrVariant;
 auto createVariableEPV(Token varName) -> ExprPtrVariant;
 auto createAssignmentEPV(Token varName, ExprPtrVariant expr) -> ExprPtrVariant;
+auto createLogicalEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
+    -> ExprPtrVariant;
 
 // Expression types;
 struct BinaryExpr final : public Uncopyable {
@@ -104,6 +108,13 @@ struct AssignmentExpr final : public Uncopyable {
   Token varName;
   ExprPtrVariant right;
   AssignmentExpr(Token varName, ExprPtrVariant right);
+};
+
+struct LogicalExpr final : public Uncopyable {
+  ExprPtrVariant left;
+  Token op;
+  ExprPtrVariant right;
+  LogicalExpr(ExprPtrVariant left, Token op, ExprPtrVariant right);
 };
 
 }  // namespace cpplox::AST

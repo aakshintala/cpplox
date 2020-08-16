@@ -220,10 +220,14 @@ auto RDParser::varDecl() -> StmtPtrVariant {
   throw error("Expected a variable name after the var keyword");
 }
 
-// statement   → exprStmt | printStmt | blockStmt;
+// statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
+// statement   → forStmt;
 auto RDParser::statement() -> StmtPtrVariant {
   if (match(TokenType::PRINT)) return printStmt();
   if (match(TokenType::LEFT_BRACE)) return blockStmt();
+  if (match(TokenType::IF)) return ifStmt();
+  if (match(TokenType::WHILE)) return whileStmt();
+  if (match(TokenType::FOR)) return forStmt();
   return exprStmt();
 }
 
@@ -255,6 +259,75 @@ auto RDParser::blockStmt() -> StmtPtrVariant {
   return AST::createBlockSPV(std::move(statements));
 }
 
+// ifStmt      → "if" "(" expression ")" statement ("else" statement)? ;
+auto RDParser::ifStmt() -> StmtPtrVariant {
+  advance();
+  consumeOrError(TokenType::LEFT_PAREN, "Expecte '(' after if.");
+  ExprPtrVariant condition = expression();
+  consumeOrError(TokenType::RIGHT_PAREN, "Expecte ')' after if condition.");
+
+  StmtPtrVariant thenBranch = statement();
+
+  std::optional<StmtPtrVariant> elseBranch = std::nullopt;
+  if (match(TokenType::ELSE)) {
+    advance();
+    elseBranch = std::make_optional(statement());
+  }
+
+  return AST::createIfSPV(std::move(condition), std::move(thenBranch),
+                          std::move(elseBranch));
+}
+
+// whileStmt   → "while" "(" expression ")" statement;
+auto RDParser::whileStmt() -> StmtPtrVariant {
+  advance();
+  consumeOrError(TokenType::LEFT_PAREN, "Expecte '(' after while.");
+  ExprPtrVariant condition = expression();
+  consumeOrError(TokenType::RIGHT_PAREN, "Expecte ')' after while condition.");
+  return AST::createWhileSPV(std::move(condition), statement());
+}
+
+// forStmt     → "for" "("
+//                          (varDecl | exprStmnt | ";")
+//                          expression? ";"
+//                          expression?
+//                     ")"
+//                statement;
+auto RDParser::forStmt() -> StmtPtrVariant {
+  advance();
+  consumeOrError(TokenType::LEFT_PAREN, "Expected '(' after for.");
+
+  std::optional<StmtPtrVariant> initializer = std::nullopt;
+  if (match(TokenType::SEMICOLON)) {
+    advance();
+  } else if (match(TokenType::VAR)) {
+    advance();
+    initializer = std::make_optional(varDecl());
+  } else {
+    initializer = std::make_optional(exprStmt());
+  }
+
+  std::optional<ExprPtrVariant> condition = std::nullopt;
+  if (!match(TokenType::SEMICOLON))
+    condition = std::make_optional(expression());
+
+  consumeSemicolonOrError();
+
+  std::optional<ExprPtrVariant> increment = std::nullopt;
+  if (!match(TokenType::RIGHT_PAREN))
+    increment = std::make_optional(expression());
+
+  consumeOrError(TokenType::RIGHT_PAREN, "Expecte ')' after 'for' clauses.");
+
+  StmtPtrVariant loopBody = statement();
+
+  return AST::createForSPV(std::move(initializer), std::move(condition),
+                           std::move(increment), std::move(loopBody));
+}
+
+//=============//
+// Expressions //
+//=============//
 // expression → comma;
 auto RDParser::expression() -> ExprPtrVariant { return comma(); }
 
@@ -279,15 +352,36 @@ auto RDParser::assignment() -> ExprPtrVariant {
   return expr;
 }
 
+// conditional → logical_or ("?" expression ":" conditional)?;
 // conditional → equality ("?" expression ":" conditional)?
 auto RDParser::conditional() -> ExprPtrVariant {
-  ExprPtrVariant expr = equality();
+  ExprPtrVariant expr = logical_or();
   if (match(TokenType::QUESTION)) {
     Token op = getTokenAndAdvance();
     ExprPtrVariant thenBranch = expression();
     consumeOrError(TokenType::COLON, "Expected a colon after ternary operator");
     return AST::createConditionalEPV(std::move(expr), std::move(thenBranch),
                                      conditional());
+  }
+  return expr;
+}
+
+// logical_or  → logical_and ("or" logical_and)*;
+auto RDParser::logical_or() -> ExprPtrVariant {
+  ExprPtrVariant expr = logical_and();
+  while (match(TokenType::OR)) {
+    Token op = getTokenAndAdvance();
+    expr = AST::createLogicalEPV(std::move(expr), op, logical_and());
+  }
+  return expr;
+}
+
+// logical_and → equality ("and" equality)*;
+auto RDParser::logical_and() -> ExprPtrVariant {
+  ExprPtrVariant expr = equality();
+  while (match(TokenType::AND)) {
+    Token op = getTokenAndAdvance();
+    expr = AST::createLogicalEPV(std::move(expr), op, equality());
   }
   return expr;
 }

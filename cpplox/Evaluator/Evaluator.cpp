@@ -153,6 +153,17 @@ auto Evaluator::evaluatePostfixExpr(const PostfixExprPtr& expr) -> Value {
   return leftVal;
 }
 
+auto Evaluator::evaluateLogicalExpr(const LogicalExprPtr& expr) -> Value {
+  Value leftVal = evaluate(expr->left);
+  if (expr->op.getType() == TokenType::OR)
+    return Types::isTrue(leftVal) ? leftVal : evaluate(expr->right);
+  if (expr->op.getType() == TokenType::AND)
+    return !Types::isTrue(leftVal) ? leftVal : evaluate(expr->right);
+
+  throw reportRuntimeError(eReporter, expr->op,
+                           "Illegal logical operator: " + expr->op.getLexeme());
+}
+
 auto Evaluator::evaluate(const ExprPtrVariant& expr) -> Value {
   switch (expr.index()) {
     case 0:  // BinaryExprPtr
@@ -171,8 +182,10 @@ auto Evaluator::evaluate(const ExprPtrVariant& expr) -> Value {
       return evaluateVariableExpr(std::get<6>(expr));
     case 7:  // AssignmentExprPtr
       return evaluateAssignmentExpr(std::get<7>(expr));
+    case 8:  // LogicalExpr
+      return evaluateLogicalExpr(std::get<8>(expr));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 8,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 9,
                     "Looks like you forgot to update the cases in "
                     "Evaluator::Evaluate(const ExptrVariant&)!");
       return "";
@@ -182,16 +195,16 @@ auto Evaluator::evaluate(const ExprPtrVariant& expr) -> Value {
 //==============================//
 // Statement Evaluation Methods //
 //==============================//
-void Evaluator::evaluateExprStmtPtr(const ExprStmtPtr& stmt) {
+void Evaluator::evaluateExprStmt(const ExprStmtPtr& stmt) {
   evaluate(stmt->expression);
 }
 
-void Evaluator::evaluatePrintStmtPtr(const PrintStmtPtr& stmt) {
+void Evaluator::evaluatePrintStmt(const PrintStmtPtr& stmt) {
   Value value = evaluate(stmt->expression);
   std::cout << Types::getValueString(value) << std::endl;
 }
 
-void Evaluator::evaluateBlockStmtPtr(const BlockStmtPtr& stmt) {
+void Evaluator::evaluateBlockStmt(const BlockStmtPtr& stmt) {
   environManager.createNewEnviron();
   for (auto& statement : stmt->statements) {
     try {
@@ -207,7 +220,7 @@ void Evaluator::evaluateBlockStmtPtr(const BlockStmtPtr& stmt) {
   environManager.discardCurrentEnviron();
 }
 
-void Evaluator::evaluateVarStmtPtr(const VarStmtPtr& stmt) {
+void Evaluator::evaluateVarStmt(const VarStmtPtr& stmt) {
   if (stmt->initializer.has_value()) {
     environManager.define(
         stmt->varName, std::make_optional(evaluate(stmt->initializer.value())));
@@ -216,23 +229,54 @@ void Evaluator::evaluateVarStmtPtr(const VarStmtPtr& stmt) {
   }
 }
 
+void Evaluator::evaluateIfStmt(const IfStmtPtr& stmt) {
+  if (Types::isTrue(evaluate(stmt->condition)))
+    evaluate(stmt->thenBranch);
+  else if (stmt->elseBranch.has_value())
+    return evaluate(stmt->elseBranch.value());
+}
+
+// WhileStmt(ExprPtrVariant condition, StmtPtrVariant loopBody)
+void Evaluator::evaluateWhileStmt(const WhileStmtPtr& stmt) {
+  while (Types::isTrue(evaluate(stmt->condition))) {
+    evaluate(stmt->loopBody);
+  }
+}
+
+// ForStmt(std::optional<StmtPtrVariant> initializer,
+//         std::optional<ExprPtrVariant> condition,
+//         std::optional<ExprPtrVariant> increment, StmtPtrVariant loopBody);
+void Evaluator::evaluateForStmt(const ForStmtPtr& stmt) {
+  if (stmt->initializer.has_value()) evaluate(stmt->initializer.value());
+  while (true) {
+    if (stmt->condition.has_value()
+        && !Types::isTrue(evaluate(stmt->condition.value()))) {
+      break;
+    }
+    evaluate(stmt->loopBody);
+    if (stmt->increment.has_value()) evaluate(stmt->increment.value());
+  }
+}
+
 void Evaluator::evaluate(const AST::StmtPtrVariant& stmt) {
   switch (stmt.index()) {
-    case 0:  // ExprStmtPtr
-      evaluateExprStmtPtr(std::get<0>(stmt));
-      break;
-    case 1:  // PrintStmtPtr
-      evaluatePrintStmtPtr(std::get<1>(stmt));
-      break;
-    case 2:  // BlockStmtPtr
-      evaluateBlockStmtPtr(std::get<2>(stmt));
-      break;
-    case 3:  // VarStmtPtr
-      evaluateVarStmtPtr(std::get<3>(stmt));
-      break;
+    case 0:  // ExprStmt
+      return evaluateExprStmt(std::get<0>(stmt));
+    case 1:  // PrintStmt
+      return evaluatePrintStmt(std::get<1>(stmt));
+    case 2:  // BlockStmt
+      return evaluateBlockStmt(std::get<2>(stmt));
+    case 3:  // VarStmt
+      return evaluateVarStmt(std::get<3>(stmt));
+    case 4:  // IfStmt
+      return evaluateIfStmt(std::get<4>(stmt));
+    case 5:  // WhileStmt
+      return evaluateWhileStmt(std::get<5>(stmt));
+    case 6:  // ForStmt
+      return evaluateForStmt(std::get<6>(stmt));
     default:
       static_assert(
-          std::variant_size_v<StmtPtrVariant> == 4,
+          std::variant_size_v<StmtPtrVariant> == 7,
           "Looks like you forgot to update the cases in "
           "PrettyPrinter::toString(const StmtPtrVariant& statement)!");
   }

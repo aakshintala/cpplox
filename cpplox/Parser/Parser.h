@@ -15,18 +15,27 @@
 // This is a recursive descent parser for the lox language.
 // Currently it only parses expressions.
 
+// clang-format off
 // Grammar production rules:
 // program     → declaration* LOX_EOF;
 // declaration → varDecl | statement;
 // varDecl     → "var" IDENTIFIER ("=" expression)? ";" ;
-// statement   → exprStmt | printStmt | blockStmt;
+// statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt | // //
+// statement   → forStmt;
 // exprStmt    → expression ';' ;
 // printStmt   → "print" expression ';' ;
 // blockStmt   → "{" declaration "}"
+// ifStmt      → "if" "(" expression ")" statement ("else" statement)? ;
+// whileStmt   → "while" "(" expression ")" statement;
+// forStmt     → "for" "(" varDecl | exprStmnt | ";"
+//                          expression? ";"
+//                          expression? ")" statement;
 // expression  → comma;
 // comma       → assignment ("," assignment)*;
 // assignment  → IDENTIFIER "=" assignment | condititional;
-// conditional → equality ("?" expression ":" conditional)?;
+// conditional → logical_or ("?" expression ":" conditional)?;
+// logical_or  → logical_and ("or" logical_and)*;
+// logical_and → equality ("and" equality)*;
 // equality    → comparison(("!=" | "==") comparison) *;
 // comparison  → addition((">" | ">=" | "<" | "<=") addition) *;
 // addition    → multiplication(("-" | "+") multiplication) *;
@@ -41,9 +50,9 @@
 // primary     → (">" | ">=" | "<" | "<=") comparison;
 // primary     → ("+")addition;
 // primary     → ("/" | "*") multiplication;
+// clang-format on
 
 namespace cpplox::Parser {
-
 using AST::ExprPtrVariant;
 using AST::StmtPtrVariant;
 
@@ -70,11 +79,17 @@ class RDParser {
   auto exprStmt() -> StmtPtrVariant;
   auto printStmt() -> StmtPtrVariant;
   auto blockStmt() -> StmtPtrVariant;
+  auto ifStmt() -> StmtPtrVariant;
+  auto whileStmt() -> StmtPtrVariant;
+  auto forStmt() -> StmtPtrVariant;
+
   // Expression Parsing
   auto expression() -> ExprPtrVariant;
   auto comma() -> ExprPtrVariant;
   auto assignment() -> ExprPtrVariant;
   auto conditional() -> ExprPtrVariant;
+  auto logical_or() -> ExprPtrVariant;
+  auto logical_and() -> ExprPtrVariant;
   auto equality() -> ExprPtrVariant;
   auto comparison() -> ExprPtrVariant;
   auto addition() -> ExprPtrVariant;

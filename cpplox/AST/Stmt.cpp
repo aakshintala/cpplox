@@ -1,5 +1,8 @@
 #include "cpplox/AST/Stmt.h"
 
+#include <iterator>
+#include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -15,6 +18,24 @@ BlockStmt::BlockStmt(std::vector<StmtPtrVariant> statements)
 
 VarStmt::VarStmt(Token varName, std::optional<ExprPtrVariant> initializer)
     : varName(std::move(varName)), initializer(std::move(initializer)) {}
+
+IfStmt::IfStmt(ExprPtrVariant condition, StmtPtrVariant thenBranch,
+               std::optional<StmtPtrVariant> elseBranch)
+    : condition(std::move(condition)),
+      thenBranch(std::move(thenBranch)),
+      elseBranch(std::move(elseBranch)) {}
+
+WhileStmt::WhileStmt(ExprPtrVariant condition, StmtPtrVariant loopBody)
+    : condition(std::move(condition)), loopBody(std::move(loopBody)) {}
+
+ForStmt::ForStmt(std::optional<StmtPtrVariant> initializer,
+                 std::optional<ExprPtrVariant> condition,
+                 std::optional<ExprPtrVariant> increment,
+                 StmtPtrVariant loopBody)
+    : initializer(std::move(initializer)),
+      condition(std::move(condition)),
+      increment(std::move(increment)),
+      loopBody(std::move(loopBody)) {}
 
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createExprSPV(ExprPtrVariant expr) -> StmtPtrVariant {
@@ -32,6 +53,25 @@ auto createBlockSPV(std::vector<StmtPtrVariant> statements) -> StmtPtrVariant {
 auto createVarSPV(Token varName, std::optional<ExprPtrVariant> initializer)
     -> StmtPtrVariant {
   return std::make_unique<VarStmt>(varName, std::move(initializer));
+}
+
+auto createIfSPV(ExprPtrVariant condition, StmtPtrVariant thenBranch,
+                 std::optional<StmtPtrVariant> elseBranch) -> StmtPtrVariant {
+  return std::make_unique<IfStmt>(std::move(condition), std::move(thenBranch),
+                                  std::move(elseBranch));
+}
+
+auto createWhileSPV(ExprPtrVariant condition, StmtPtrVariant loopBody)
+    -> StmtPtrVariant {
+  return std::make_unique<WhileStmt>(std::move(condition), std::move(loopBody));
+}
+
+auto createForSPV(std::optional<StmtPtrVariant> initializer,
+                  std::optional<ExprPtrVariant> condition,
+                  std::optional<ExprPtrVariant> increment,
+                  StmtPtrVariant loopBody) -> StmtPtrVariant {
+  return std::make_unique<ForStmt>(std::move(initializer), std::move(condition),
+                                   std::move(increment), std::move(loopBody));
 }
 
 }  // namespace cpplox::AST

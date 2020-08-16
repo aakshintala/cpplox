@@ -1,1 +1,8 @@
-build --cxxopt='-std=c++17' --cxxopt='-D_CPPLOX_DEBUG_' --cxxopt='-flto=thin' --linkopt='-flto=thin'
+# use c++17
+build --cxxopt='-std=c++17'
+
+# enable debugPrint or not
+build --cxxopt='-D_CPPLOX_DEBUG_'
+
+# Enable LTO
+# build --cxxopt='-flto=thin' --linkopt='-flto=thin'

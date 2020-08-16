@@ -21,15 +21,19 @@ using AST::ConditionalExprPtr;
 using AST::ExprPtrVariant;
 using AST::GroupingExprPtr;
 using AST::LiteralExprPtr;
+using AST::LogicalExprPtr;
 using AST::PostfixExprPtr;
 using AST::UnaryExprPtr;
 using AST::VariableExprPtr;
 
 using AST::BlockStmtPtr;
 using AST::ExprStmtPtr;
+using AST::ForStmtPtr;
+using AST::IfStmtPtr;
 using AST::PrintStmtPtr;
 using AST::StmtPtrVariant;
 using AST::VarStmtPtr;
+using AST::WhileStmtPtr;
 
 using ErrorsAndDebug::ErrorReporter;
 
@@ -57,12 +61,16 @@ class Evaluator {
   auto evaluatePostfixExpr(const PostfixExprPtr& expr) -> Value;
   auto evaluateVariableExpr(const VariableExprPtr& expr) -> Value;
   auto evaluateAssignmentExpr(const AssignmentExprPtr& expr) -> Value;
+  auto evaluateLogicalExpr(const LogicalExprPtr& expr) -> Value;
 
   // evaluation functions for Stmt types
-  void evaluateExprStmtPtr(const ExprStmtPtr& stmt);
-  void evaluatePrintStmtPtr(const PrintStmtPtr& stmt);
-  void evaluateBlockStmtPtr(const BlockStmtPtr& stmt);
-  void evaluateVarStmtPtr(const VarStmtPtr& stmt);
+  void evaluateExprStmt(const ExprStmtPtr& stmt);
+  void evaluatePrintStmt(const PrintStmtPtr& stmt);
+  void evaluateBlockStmt(const BlockStmtPtr& stmt);
+  void evaluateVarStmt(const VarStmtPtr& stmt);
+  void evaluateIfStmt(const IfStmtPtr& stmt);
+  void evaluateWhileStmt(const WhileStmtPtr& stmt);
+  void evaluateForStmt(const ForStmtPtr& stmt);
 
   // Helper functions
   // throws RuntimeError if right isn't a double

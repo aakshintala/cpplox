@@ -1,4 +1,4 @@
-Things to implement:
+# Things to implement
 
 * End-to-end testing (lox programs under lox-tests)
   * Figure out if we can use Google Test infrastructure to achieve this

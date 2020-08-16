@@ -5,6 +5,7 @@ Checks: |
   clang-analyzer-*,
   clang-diagnostic-*,
   cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
   google-*,
   -google-runtime-references,
   -google-readability-braces-around-statements,

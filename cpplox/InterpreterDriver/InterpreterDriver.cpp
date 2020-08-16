@@ -22,6 +22,7 @@ namespace cpplox {
 using ErrorsAndDebug::debugPrint;
 using ErrorsAndDebug::ErrorReporter;
 using ErrorsAndDebug::LoxStatus;
+using ErrorsAndDebug::RuntimeError;
 using Parser::RDParser;
 using Types::Token;
 using Types::TokenType;
