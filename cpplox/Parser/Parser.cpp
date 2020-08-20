@@ -9,6 +9,8 @@
 #include <variant>
 #include <vector>
 
+#include "cpplox/ErrorsAndDebug/DebugPrint.h"
+
 namespace cpplox::Parser {
 
 using Types::Token;
@@ -25,7 +27,7 @@ void RDParser::advance() {
   if (!isAtEnd()) ++currentIter;
 }
 
-auto RDParser::consumeOneOrMoreBinaryExpr(
+auto RDParser::consumeAnyBinaryExprs(
     const std::initializer_list<TokenType>& types, ExprPtrVariant expr,
     const parserFn& f) -> ExprPtrVariant {
   while (match(types)) {
@@ -38,7 +40,7 @@ auto RDParser::consumeOneOrMoreBinaryExpr(
 void RDParser::consumeOrError(TokenType tType,
                               const std::string& errorMessage) {
   if (getCurrentTokenType() == tType) return advance();
-  throw error(errorMessage);
+  throw error(errorMessage + " Got: " + peek().toString());
 }
 
 auto RDParser::consumeOneLiteral(const std::string& str) -> ExprPtrVariant {
@@ -76,8 +78,7 @@ auto RDParser::consumeVarExpr() -> ExprPtrVariant {
 }
 
 void RDParser::consumeSemicolonOrError() {
-  consumeOrError(TokenType::SEMICOLON,
-                 "Expect a ';' after variable declaration");
+  consumeOrError(TokenType::SEMICOLON, "Expected a ';'");
 }
 
 auto RDParser::error(const std::string& eMessage) -> RDParser::RDParseError {
@@ -191,15 +192,25 @@ void RDParser::program() {
   }
 }
 
-// declaration → varDecl | statement;
+// declaration → varDecl | funcDecl | statement;
 auto RDParser::declaration() -> std::optional<StmtPtrVariant> {
   try {
     if (match(TokenType::VAR)) {
       advance();
       return varDecl();
     }
+
+    if (match(TokenType::FUN)) {
+      advance();
+      return funcDecl("function");
+    }
+
     return statement();
+
   } catch (const RDParseError& e) {
+    ErrorsAndDebug::debugPrint(
+        "Caught ParseError; Calling synchronize. Current Token:"
+        + peek().toString());
     synchronize();
     return std::nullopt;
   }
@@ -220,6 +231,48 @@ auto RDParser::varDecl() -> StmtPtrVariant {
   throw error("Expected a variable name after the var keyword");
 }
 
+// parameters → IDENTIFIER ( "," IDENTIFIER )* ;
+auto RDParser::parameters() -> std::vector<Token> {
+  std::vector<Token> params;
+  do {
+    if (peek().getType() != TokenType::IDENTIFIER)
+      throw error("Expected an indentifier for parameter.");
+    params.emplace_back(getTokenAndAdvance());
+  } while ([this]() -> bool {
+    if (match(TokenType::COMMA)) {
+      advance();
+      return true;
+    }
+    return false;
+  }());
+  return params;
+}
+
+// funcDecl    → "fun" IDENTIFIER "(" parameters? ")" "{" declaration "}";
+auto RDParser::funcDecl(std::string kind) -> StmtPtrVariant {
+  if (match(TokenType::IDENTIFIER)) {
+    Token funcName = getTokenAndAdvance();
+    consumeOrError(TokenType::LEFT_PAREN,
+                   "Expecte '(' after " + kind + " decl.");
+    // Grab any parameters for the function
+    std::vector<Token> params
+        = match(TokenType::RIGHT_PAREN) ? std::vector<Token>() : parameters();
+    consumeOrError(TokenType::RIGHT_PAREN,
+                   "Expecte ')' after " + kind + " params.");
+    consumeOrError(TokenType::LEFT_BRACE,
+                   "Expecte '{' after " + kind + " params.");
+    std::vector<StmtPtrVariant> fnBody;
+    while (!match(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+      if (auto optStmnt = declaration(); optStmnt.has_value())
+        fnBody.push_back(std::move(optStmnt.value()));
+    }
+    consumeOrError(TokenType::RIGHT_BRACE,
+                   "Expecte '}' after " + kind + " body.");
+    return AST::createFuncSPV(funcName, std::move(params), std::move(fnBody));
+  }
+  throw error("Expected a " + kind + " name after the fun keyword");
+}
+
 // statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
 // statement   → forStmt;
 auto RDParser::statement() -> StmtPtrVariant {
@@ -228,6 +281,7 @@ auto RDParser::statement() -> StmtPtrVariant {
   if (match(TokenType::IF)) return ifStmt();
   if (match(TokenType::WHILE)) return whileStmt();
   if (match(TokenType::FOR)) return forStmt();
+  if (match(TokenType::RETURN)) return returnStmt();
   return exprStmt();
 }
 
@@ -325,6 +379,17 @@ auto RDParser::forStmt() -> StmtPtrVariant {
                            std::move(increment), std::move(loopBody));
 }
 
+// returnStmt  → "return" (expression)? ";";
+auto RDParser::returnStmt() -> StmtPtrVariant {
+  Token ret = getTokenAndAdvance();
+  std::optional<AST::ExprPtrVariant> value = std::nullopt;
+  if (!match(TokenType::SEMICOLON)) {
+    value = expression();
+  }
+  consumeSemicolonOrError();
+  return AST::createRetSPV(std::move(ret), std::move(value));
+}
+
 //=============//
 // Expressions //
 //=============//
@@ -337,8 +402,8 @@ auto RDParser::expression() -> ExprPtrVariant { return comma(); }
 // higher precedence than !the comma operator
 // comma → assignment ("," assignment)*;
 auto RDParser::comma() -> ExprPtrVariant {
-  return consumeOneOrMoreBinaryExpr({TokenType::COMMA}, assignment(),
-                                    &RDParser::assignment);
+  return consumeAnyBinaryExprs({TokenType::COMMA}, assignment(),
+                               &RDParser::assignment);
 }
 
 // assignment  → IDENTIFIER "=" assignment | condititional;
@@ -389,29 +454,29 @@ auto RDParser::logical_and() -> ExprPtrVariant {
 // equality   → comparison(("!=" | "==") comparison) *;
 auto RDParser::equality() -> ExprPtrVariant {
   auto equalityTypes = {TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL};
-  return consumeOneOrMoreBinaryExpr(equalityTypes, comparison(),
-                                    &RDParser::comparison);
+  return consumeAnyBinaryExprs(equalityTypes, comparison(),
+                               &RDParser::comparison);
 }
 
 // comparison → addition((">" | ">=" | "<" | "<=") addition) *;
 auto RDParser::comparison() -> ExprPtrVariant {
   auto comparatorTypes = {TokenType::GREATER, TokenType::GREATER_EQUAL,
                           TokenType::LESS, TokenType::LESS_EQUAL};
-  return consumeOneOrMoreBinaryExpr(comparatorTypes, addition(),
-                                    &RDParser::addition);
+  return consumeAnyBinaryExprs(comparatorTypes, addition(),
+                               &RDParser::addition);
 }
 
 // addition   → multiplication(("-" | "+") multiplication) *;
 auto RDParser::addition() -> ExprPtrVariant {
   auto additionTypes = {TokenType::PLUS, TokenType::MINUS};
-  return consumeOneOrMoreBinaryExpr(additionTypes, multiplication(),
-                                    &RDParser::multiplication);
+  return consumeAnyBinaryExprs(additionTypes, multiplication(),
+                               &RDParser::multiplication);
 }
 
 // multi...   → unary(("/" | "*") unary) *;
 auto RDParser::multiplication() -> ExprPtrVariant {
   auto multTypes = {TokenType::SLASH, TokenType::STAR};
-  return consumeOneOrMoreBinaryExpr(multTypes, unary(), &RDParser::unary);
+  return consumeAnyBinaryExprs(multTypes, unary(), &RDParser::unary);
 }
 
 // unary      → ("!" | "-" | "--" | "++") unary | postfix;
@@ -424,7 +489,40 @@ auto RDParser::unary() -> ExprPtrVariant {
 
 // postfix    → primary ("++" | "--")*;
 auto RDParser::postfix() -> ExprPtrVariant {
-  return consumePostfixExpr(primary());
+  return consumePostfixExpr(call());
+}
+
+// call        → primary ( "(" arguments? ")" )*;
+auto RDParser::call() -> ExprPtrVariant {
+  auto expr = primary();
+  while (true) {
+    if (match(TokenType::LEFT_PAREN)) {
+      advance();
+      std::vector<ExprPtrVariant> args;
+      if (!match(TokenType::RIGHT_PAREN)) args = arguments();
+      if (!match(TokenType::RIGHT_PAREN))
+        throw error("Expected ')' after function invocation.");
+      expr = createCallEPV(std::move(expr), getTokenAndAdvance(),
+                           std::move(args));
+    } else {
+      break;
+    }
+  }
+  return expr;
+}
+
+// Go to assignment to avoid comma
+// arguments   → assignment  ( "," assignment )* ;
+auto RDParser::arguments() -> std::vector<ExprPtrVariant> {
+  std::vector<ExprPtrVariant> args;
+  args.push_back(assignment());
+  while (match(TokenType::COMMA)) {
+    advance();
+    if (args.size() >= MAX_ARGS)
+      throw error("A function can't be invoked with more than 255 arguments");
+    args.push_back(assignment());
+  }
+  return args;
 }
 
 // primary    → NUMBER | STRING | "false" | "true" | "nil";

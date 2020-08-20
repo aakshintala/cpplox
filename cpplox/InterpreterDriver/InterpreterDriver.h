@@ -3,7 +3,9 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
+#include "cpplox/AST/Stmt.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Evaluator/Evaluator.h"
 
@@ -20,6 +22,8 @@ struct InterpreterDriver {
 
   ErrorsAndDebug::ErrorReporter eReporter;
   Evaluator::Evaluator evaluator;
+
+  std::vector<std::vector<AST::StmtPtrVariant>> lines;
 
   bool hadError = false;
   bool hadRunTimeError = false;

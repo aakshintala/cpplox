@@ -4,14 +4,8 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "evaluator",
-    srcs = [
-        "Environment.cpp",
-        "Evaluator.cpp",
-    ],
-    hdrs = [
-        "Environment.h",
-        "Evaluator.h",
-    ],
+    srcs = glob(["*.cpp"]),
+    hdrs = glob(["*.h"]),
     deps = [
         "//cpplox/AST:ASTNodes",
         "//cpplox/ErrorsAndDebug:error-reporter",

@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <vector>
 
 #include "cpplox/Types/Literal.h"
 #include "cpplox/Types/Token.h"
@@ -27,6 +28,7 @@ struct PostfixExpr;
 struct VariableExpr;
 struct AssignmentExpr;
 struct LogicalExpr;
+struct CallExpr;
 
 // Unique_pointer sugar.
 using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
@@ -38,6 +40,7 @@ using PostfixExprPtr = std::unique_ptr<PostfixExpr>;
 using VariableExprPtr = std::unique_ptr<VariableExpr>;
 using AssignmentExprPtr = std::unique_ptr<AssignmentExpr>;
 using LogicalExprPtr = std::unique_ptr<LogicalExpr>;
+using CallExprPtr = std::unique_ptr<CallExpr>;
 
 // The variant that we will use to pass around pointers to each of these
 // expression types. I'm exploring this so we don't have to rely on vTables for
@@ -45,7 +48,7 @@ using LogicalExprPtr = std::unique_ptr<LogicalExpr>;
 using ExprPtrVariant
     = std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr,
                    ConditionalExprPtr, PostfixExprPtr, VariableExprPtr,
-                   AssignmentExprPtr, LogicalExprPtr>;
+                   AssignmentExprPtr, LogicalExprPtr, CallExprPtr>;
 
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
@@ -60,6 +63,8 @@ auto createVariableEPV(Token varName) -> ExprPtrVariant;
 auto createAssignmentEPV(Token varName, ExprPtrVariant expr) -> ExprPtrVariant;
 auto createLogicalEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
     -> ExprPtrVariant;
+auto createCallEPV(ExprPtrVariant callee, Token paren,
+                   std::vector<ExprPtrVariant> arguments) -> ExprPtrVariant;
 
 // Expression types;
 struct BinaryExpr final : public Uncopyable {
@@ -115,6 +120,14 @@ struct LogicalExpr final : public Uncopyable {
   Token op;
   ExprPtrVariant right;
   LogicalExpr(ExprPtrVariant left, Token op, ExprPtrVariant right);
+};
+
+struct CallExpr final : public Uncopyable {
+  ExprPtrVariant callee;
+  Token paren;
+  std::vector<ExprPtrVariant> arguments;
+  CallExpr(ExprPtrVariant callee, Token paren,
+           std::vector<ExprPtrVariant> arguments);
 };
 
 }  // namespace cpplox::AST

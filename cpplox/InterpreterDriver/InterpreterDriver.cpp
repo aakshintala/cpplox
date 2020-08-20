@@ -3,14 +3,13 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #include "cpplox/AST/Expr.h"
 #include "cpplox/AST/PrettyPrinter.h"
-#include "cpplox/AST/Stmt.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
 #include "cpplox/Parser/Parser.h"
@@ -120,7 +119,11 @@ auto parse(const std::vector<Token>& tokenVec)
 void InterpreterDriver::interpret(const std::string& source) {
   try {
     eReporter.clearErrors();
-    evaluator.evaluate(parse(scan(source)));
+    // Store all syntactically correct statements so we can ensure that
+    // references held by the Evaluator (functions, classes) are live.
+    // Also permits us reconstruct evaluator state if need be.
+    lines.emplace_back(parse(scan(source)));
+    evaluator.evaluate(lines.back());
     if (eReporter.getStatus() != LoxStatus::OK) {
       eReporter.printToStdErr();
     }

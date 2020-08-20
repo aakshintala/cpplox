@@ -84,7 +84,7 @@ class Token {
   const TokenType type;
   const std::string lexeme;
   OptionalLiteral literal = std::nullopt;
-  const int line = 1;
+  const int line = -1;
 };  // class Token
 
 }  // namespace cpplox::Types

@@ -36,6 +36,11 @@ AssignmentExpr::AssignmentExpr(Token varName, ExprPtrVariant right)
 LogicalExpr::LogicalExpr(ExprPtrVariant left, Token op, ExprPtrVariant right)
     : left(std::move(left)), op(std::move(op)), right(std::move(right)) {}
 
+CallExpr::CallExpr(ExprPtrVariant callee, Token paren,
+                   std::vector<ExprPtrVariant> arguments)
+    : callee(std::move(callee)),
+      paren(std::move(paren)),
+      arguments(std::move(arguments)) {}
 // ==============================//
 // EPV creation helper functions //
 // ==============================//
@@ -77,6 +82,12 @@ auto createAssignmentEPV(Token varName, ExprPtrVariant expr) -> ExprPtrVariant {
 auto createLogicalEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
     -> ExprPtrVariant {
   return std::make_unique<LogicalExpr>(std::move(left), op, std::move(right));
+}
+
+auto createCallEPV(ExprPtrVariant callee, Token paren,
+                   std::vector<ExprPtrVariant> arguments) -> ExprPtrVariant {
+  return std::make_unique<CallExpr>(std::move(callee), std::move(paren),
+                                    std::move(arguments));
 }
 
 }  // namespace cpplox::AST

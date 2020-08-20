@@ -37,6 +37,15 @@ ForStmt::ForStmt(std::optional<StmtPtrVariant> initializer,
       increment(std::move(increment)),
       loopBody(std::move(loopBody)) {}
 
+FuncStmt::FuncStmt(Token funcName, std::vector<Token> parameters,
+                   std::vector<StmtPtrVariant> body)
+    : funcName(std::move(funcName)),
+      parameters(std::move(parameters)),
+      body(std::move(body)) {}
+
+RetStmt::RetStmt(Token ret, std::optional<ExprPtrVariant> value)
+    : ret(std::move(ret)), value(std::move(value)) {}
+
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createExprSPV(ExprPtrVariant expr) -> StmtPtrVariant {
   return std::make_unique<ExprStmt>(std::move(expr));
@@ -72,6 +81,17 @@ auto createForSPV(std::optional<StmtPtrVariant> initializer,
                   StmtPtrVariant loopBody) -> StmtPtrVariant {
   return std::make_unique<ForStmt>(std::move(initializer), std::move(condition),
                                    std::move(increment), std::move(loopBody));
+}
+
+auto createFuncSPV(Token fName, std::vector<Token> params,
+                   std::vector<StmtPtrVariant> fnBody) -> StmtPtrVariant {
+  return std::make_unique<FuncStmt>(std::move(fName), std::move(params),
+                                    std::move(fnBody));
+}
+
+auto createRetSPV(Token ret, std::optional<ExprPtrVariant> value)
+    -> StmtPtrVariant {
+  return std::make_unique<RetStmt>(std::move(ret), std::move(value));
 }
 
 }  // namespace cpplox::AST

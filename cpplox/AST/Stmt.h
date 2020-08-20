@@ -24,6 +24,8 @@ struct VarStmt;
 struct IfStmt;
 struct WhileStmt;
 struct ForStmt;
+struct FuncStmt;
+struct RetStmt;
 
 // Shared pointer sugar.
 using ExprStmtPtr = std::unique_ptr<ExprStmt>;
@@ -33,12 +35,14 @@ using VarStmtPtr = std::unique_ptr<VarStmt>;
 using IfStmtPtr = std::unique_ptr<IfStmt>;
 using WhileStmtPtr = std::unique_ptr<WhileStmt>;
 using ForStmtPtr = std::unique_ptr<ForStmt>;
+using FuncStmtPtr = std::unique_ptr<FuncStmt>;
+using RetStmtPtr = std::unique_ptr<RetStmt>;
 
 // We use this variant to pass around pointers to each of these Stmt types,
 // without having to resort to virtual functions and dynamic dispatch
-using StmtPtrVariant
-    = std::variant<ExprStmtPtr, PrintStmtPtr, BlockStmtPtr, VarStmtPtr,
-                   IfStmtPtr, WhileStmtPtr, ForStmtPtr>;
+using StmtPtrVariant = std::variant<ExprStmtPtr, PrintStmtPtr, BlockStmtPtr,
+                                    VarStmtPtr, IfStmtPtr, WhileStmtPtr,
+                                    ForStmtPtr, FuncStmtPtr, RetStmtPtr>;
 
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createExprSPV(ExprPtrVariant expr) -> StmtPtrVariant;
@@ -54,6 +58,10 @@ auto createForSPV(std::optional<StmtPtrVariant> initializer,
                   std::optional<ExprPtrVariant> condition,
                   std::optional<ExprPtrVariant> increment,
                   StmtPtrVariant loopBody) -> StmtPtrVariant;
+auto createFuncSPV(Token fName, std::vector<Token> params,
+                   std::vector<StmtPtrVariant> fnBody) -> StmtPtrVariant;
+auto createRetSPV(Token ret, std::optional<ExprPtrVariant> value)
+    -> StmtPtrVariant;
 
 // Statment AST types;
 struct ExprStmt final : public Uncopyable {
@@ -100,6 +108,20 @@ struct ForStmt final : public Uncopyable {
                    std::optional<ExprPtrVariant> condition,
                    std::optional<ExprPtrVariant> increment,
                    StmtPtrVariant loopBody);
+};
+
+struct FuncStmt : public Uncopyable {
+  Token funcName;
+  std::vector<Token> parameters;
+  std::vector<StmtPtrVariant> body;
+  FuncStmt(Token funcName, std::vector<Token> parameters,
+           std::vector<StmtPtrVariant> body);
+};
+
+struct RetStmt : public Uncopyable {
+  Token ret;
+  std::optional<ExprPtrVariant> value;
+  RetStmt(Token ret, std::optional<ExprPtrVariant> value);
 };
 
 }  // namespace cpplox::AST

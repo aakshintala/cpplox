@@ -72,6 +72,17 @@ auto printLogicalExpr(const PrettyPrinter& printer, const LogicalExprPtr& expr)
     -> std::string {
   return parenthesize(printer, expr->op.getLexeme(), expr->left, expr->right);
 }
+// myGloriousFn(arg1, expr1+expr2)
+// ( ((arg1), (+ expr1 expr2)) myGloriousFn )
+auto printCallExpr(const PrettyPrinter& printer, const CallExprPtr& expr)
+    -> std::string {
+  std::string result;
+  for (size_t i = 0; i < expr->arguments.size(); ++i) {
+    if (i > 0 && i < expr->arguments.size() - 1) result += ", ";
+    result += "( " + printer.toString(expr->arguments[i]) + " )";
+  }
+  return parenthesize(printer, "( " + result + " )", expr->callee);
+}
 
 }  // namespace
 
@@ -96,8 +107,10 @@ auto PrettyPrinter::toString(const ExprPtrVariant& expression) const
       return printAssignmentExpr(*this, std::get<7>(expression));
     case 8:  // LogicalExprPtr
       return printLogicalExpr(*this, std::get<8>(expression));
+    case 9:  // CallExprPtr
+      return printCallExpr(*this, std::get<9>(expression));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 9,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 10,
                     "Looks like you forgot to update the cases in "
                     "PrettyPrinter::toString(const ExptrVariant&)!");
       return "";
@@ -195,10 +208,32 @@ auto printForStmt(const PrettyPrinter& printer, const ForStmtPtr& stmt) {
   return forStmtStrVec;
 }
 
-// explicit ForStmt(std::optional<StmtPtrVariant> initializer,
-//                  std::optional<ExprPtrVariant> condition,
-//                  std::optional<ExprPtrVariant> increment,
-//                  StmtPtrVariant loopBody);
+// Token funcName, std::vector<Token> parameters, std::vector<StmtPtrVariant>
+// body;
+auto printFuncStmt(const PrettyPrinter& printer, const FuncStmtPtr& stmt)
+    -> std::vector<std::string> {
+  std::vector<std::string> funcStrVec;
+  std::string funcStr = "( ( " + stmt->funcName.getLexeme() + ") (";
+  for (auto i = 0; i < stmt->parameters.size(); ++i) {
+    if (0 != i) funcStr += ", ";
+    funcStr += stmt->parameters[i].getLexeme();
+  }
+  funcStrVec.emplace_back(funcStr += ") {\n");
+  for (auto& bodyStmt : stmt->body) {
+    auto tempStrVec = printer.toString(bodyStmt);
+    std::move(tempStrVec.begin(), tempStrVec.end(),
+              std::back_inserter(funcStrVec));
+  }
+  funcStrVec.emplace_back("\n}");
+  return funcStrVec;
+}
+
+auto printRetStmt(const PrettyPrinter& printer, const RetStmtPtr& stmt)
+    -> std::string {
+  std::string value
+      = stmt->value.has_value() ? printer.toString(stmt->value.value()) : " ";
+  return "( return" + value + ");";
+}
 
 }  // namespace
 
@@ -219,9 +254,13 @@ auto PrettyPrinter::toString(const StmtPtrVariant& statement) const
       return printWhileStmt(*this, std::get<5>(statement));
     case 6:  // ForStmtPtr
       return printForStmt(*this, std::get<6>(statement));
+    case 7:  // ForStmtPtr
+      return printFuncStmt(*this, std::get<7>(statement));
+    case 8:  // RetStmtPtr
+      return std::vector(1, printRetStmt(*this, std::get<8>(statement)));
     default:
       static_assert(
-          std::variant_size_v<StmtPtrVariant> == 7,
+          std::variant_size_v<StmtPtrVariant> == 9,
           "Looks like you forgot to update the cases in "
           "PrettyPrinter::toString(const StmtPtrVariant& statement)!");
       return {};

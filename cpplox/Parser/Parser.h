@@ -8,7 +8,6 @@
 
 #include "cpplox/AST/Expr.h"
 #include "cpplox/AST/Stmt.h"
-#include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Types/Token.h"
 
@@ -18,10 +17,11 @@
 // clang-format off
 // Grammar production rules:
 // program     → declaration* LOX_EOF;
-// declaration → varDecl | statement;
+// declaration → varDecl | funcDecl | statement;
 // varDecl     → "var" IDENTIFIER ("=" expression)? ";" ;
-// statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt | // //
-// statement   → forStmt;
+// funcDecl    → "fun" IDENTIFIER "(" parameters? ")" "{" declaration "}";
+// statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
+// statement   → forStmt | returnStmt;
 // exprStmt    → expression ';' ;
 // printStmt   → "print" expression ';' ;
 // blockStmt   → "{" declaration "}"
@@ -30,8 +30,10 @@
 // forStmt     → "for" "(" varDecl | exprStmnt | ";"
 //                          expression? ";"
 //                          expression? ")" statement;
+// returnStmt  → "return" (expression)? ";";
 // expression  → comma;
 // comma       → assignment ("," assignment)*;
+// arguments   → assignment  ( "," assignment )* ;
 // assignment  → IDENTIFIER "=" assignment | condititional;
 // conditional → logical_or ("?" expression ":" conditional)?;
 // logical_or  → logical_and ("or" logical_and)*;
@@ -41,7 +43,8 @@
 // addition    → multiplication(("-" | "+") multiplication) *;
 // multipli... → unary(("/" | "*") unary) *;
 // unary       → ("!" | "-" | "--" | "++") unary | postfix;
-// postfix     → primary ("++" | "--")*;
+// postfix     → call ("++" | "--")*;
+// call        → primary ( "(" arguments? ")" )*;
 // primary     → NUMBER | STRING | "false" | "true" | "nil";
 // primary     → "(" expression ")";
 // primary     → IDENTIFIER;
@@ -75,6 +78,8 @@ class RDParser {
   void program();
   auto declaration() -> std::optional<StmtPtrVariant>;
   auto varDecl() -> StmtPtrVariant;
+  auto funcDecl(std::string kind) -> StmtPtrVariant;
+  auto parameters() -> std::vector<Types::Token>;
   auto statement() -> StmtPtrVariant;
   auto exprStmt() -> StmtPtrVariant;
   auto printStmt() -> StmtPtrVariant;
@@ -82,6 +87,7 @@ class RDParser {
   auto ifStmt() -> StmtPtrVariant;
   auto whileStmt() -> StmtPtrVariant;
   auto forStmt() -> StmtPtrVariant;
+  auto returnStmt() -> StmtPtrVariant;
 
   // Expression Parsing
   auto expression() -> ExprPtrVariant;
@@ -96,13 +102,15 @@ class RDParser {
   auto multiplication() -> ExprPtrVariant;
   auto unary() -> ExprPtrVariant;
   auto postfix() -> ExprPtrVariant;
+  auto call() -> ExprPtrVariant;
+  auto arguments() -> std::vector<ExprPtrVariant>;
   auto primary() -> ExprPtrVariant;
 
   // Helper functions to implement the parser
   void advance();
   void consumeOrError(Types::TokenType tType, const std::string& errorMessage);
   using parserFn = ExprPtrVariant (RDParser::*)();
-  auto consumeOneOrMoreBinaryExpr(
+  auto consumeAnyBinaryExprs(
       const std::initializer_list<Types::TokenType>& types, ExprPtrVariant expr,
       const parserFn& f) -> ExprPtrVariant;
   auto consumeOneLiteral() -> ExprPtrVariant;
@@ -133,6 +141,8 @@ class RDParser {
       currentIter;
   ErrorsAndDebug::ErrorReporter& eReporter;
   std::vector<StmtPtrVariant> statements;
+
+  static const int MAX_ARGS = 255;
 
 };  // class RDParser
 
