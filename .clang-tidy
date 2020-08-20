@@ -12,6 +12,7 @@ Checks: |
   modernize-*,
   performance-*,
   readability-*,
+  -readability-magic-numbers,
   -readability-braces-around-statements,
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
