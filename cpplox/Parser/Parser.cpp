@@ -277,7 +277,9 @@ auto RDParser::funcBody(const std::string& kind) -> ExprPtrVariant {
 // funcDecl    → "fun" IDENTIFIER funcBody;
 auto RDParser::funcDecl(const std::string& kind) -> StmtPtrVariant {
   if (match(TokenType::IDENTIFIER)) {
-    return AST::createFuncSPV(getTokenAndAdvance(),
+    // Get the name outside or GCC produces invalid code.
+    Token funcName = getTokenAndAdvance();
+    return AST::createFuncSPV(funcName,
                               std::get<AST::FuncExprPtr>(funcBody(kind)));
   }
   throw error("Expected a " + kind + " name after the fun keyword");

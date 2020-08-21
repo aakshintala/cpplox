@@ -87,7 +87,7 @@ auto printCallExpr(const PrettyPrinter& printer, const CallExprPtr& expr)
 auto printFuncExpr(const PrettyPrinter& printer, const FuncExprPtr& expr)
     -> std::string {
   std::string funcStr = "(";
-  for (auto i = 0; i < expr->parameters.size(); ++i) {
+  for (size_t i = 0; i < expr->parameters.size(); ++i) {
     if (0 != i) funcStr += ", ";
     funcStr += expr->parameters[i].getLexeme();
   }

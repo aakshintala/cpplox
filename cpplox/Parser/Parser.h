@@ -4,6 +4,7 @@
 
 #include <exception>
 #include <iterator>
+#include <functional>
 #include <vector>
 
 #include "cpplox/AST/NodeTypes.h"
@@ -140,8 +141,9 @@ class RDParser {
 
   // The data the parser operates on.
   const std::vector<Types::Token>& tokens;
-  std::__wrap_iter<std::vector<cpplox::Types::Token>::const_pointer>
-      currentIter;
+  std::vector<cpplox::Types::Token>::const_iterator currentIter;
+  //std::__wrap_iter<std::vector<cpplox::Types::Token>::const_pointer>
+      //currentIter;
   ErrorsAndDebug::ErrorReporter& eReporter;
   std::vector<StmtPtrVariant> statements;
 
