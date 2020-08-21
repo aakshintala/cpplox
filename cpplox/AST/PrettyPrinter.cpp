@@ -1,11 +1,11 @@
 #include "cpplox/AST/PrettyPrinter.h"
-#include "Stmt.h"
-#include "cpplox/AST/Expr.h"
-#include "cpplox/Types/Literal.h"
 
 #include <iterator>
 #include <utility>
 #include <vector>
+
+#include "cpplox/Types/Literal.h"
+
 
 namespace cpplox::AST {
 //=========================//
@@ -84,6 +84,23 @@ auto printCallExpr(const PrettyPrinter& printer, const CallExprPtr& expr)
   return parenthesize(printer, "( " + result + " )", expr->callee);
 }
 
+auto printFuncExpr(const PrettyPrinter& printer, const FuncExprPtr& expr)
+    -> std::string {
+  std::string funcStr = "(";
+  for (auto i = 0; i < expr->parameters.size(); ++i) {
+    if (0 != i) funcStr += ", ";
+    funcStr += expr->parameters[i].getLexeme();
+  }
+  funcStr += ") {\n";
+  for (auto& bodyStmt : expr->body) {
+    for (const auto& str : printer.toString(bodyStmt)) {
+      funcStr += str + "\n";
+    }
+  }
+  funcStr += "\n}";
+  return funcStr;
+}
+
 }  // namespace
 
 auto PrettyPrinter::toString(const ExprPtrVariant& expression) const
@@ -109,8 +126,10 @@ auto PrettyPrinter::toString(const ExprPtrVariant& expression) const
       return printLogicalExpr(*this, std::get<8>(expression));
     case 9:  // CallExprPtr
       return printCallExpr(*this, std::get<9>(expression));
+    case 10:  // FuncExprPtr
+      return printFuncExpr(*this, std::get<10>(expression));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 10,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 11,
                     "Looks like you forgot to update the cases in "
                     "PrettyPrinter::toString(const ExptrVariant&)!");
       return "";
@@ -172,7 +191,6 @@ auto printIfStmt(const PrettyPrinter& printer, const IfStmtPtr& stmt)
   return ifStmtStrVec;
 }
 
-//   explicit WhileStmt(ExprPtrVariant condition, StmtPtrVariant loopBody);
 auto printWhileStmt(const PrettyPrinter& printer, const WhileStmtPtr& stmt) {
   std::vector<std::string> whileStmtStrVec;
   whileStmtStrVec.emplace_back("( while (" + printer.toString(stmt->condition)
@@ -208,23 +226,13 @@ auto printForStmt(const PrettyPrinter& printer, const ForStmtPtr& stmt) {
   return forStmtStrVec;
 }
 
-// Token funcName, std::vector<Token> parameters, std::vector<StmtPtrVariant>
-// body;
+// Token funcName, FuncExprPtr funcExpr
 auto printFuncStmt(const PrettyPrinter& printer, const FuncStmtPtr& stmt)
     -> std::vector<std::string> {
   std::vector<std::string> funcStrVec;
-  std::string funcStr = "( ( " + stmt->funcName.getLexeme() + ") (";
-  for (auto i = 0; i < stmt->parameters.size(); ++i) {
-    if (0 != i) funcStr += ", ";
-    funcStr += stmt->parameters[i].getLexeme();
-  }
-  funcStrVec.emplace_back(funcStr += ") {\n");
-  for (auto& bodyStmt : stmt->body) {
-    auto tempStrVec = printer.toString(bodyStmt);
-    std::move(tempStrVec.begin(), tempStrVec.end(),
-              std::back_inserter(funcStrVec));
-  }
-  funcStrVec.emplace_back("\n}");
+  funcStrVec.emplace_back("( ( " + stmt->funcName.getLexeme() + ") ");
+  funcStrVec.emplace_back(printFuncExpr(printer, stmt->funcExpr));
+  funcStrVec.emplace_back(")");
   return funcStrVec;
 }
 

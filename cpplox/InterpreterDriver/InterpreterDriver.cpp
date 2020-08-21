@@ -8,7 +8,6 @@
 #include <sstream>
 #include <string>
 
-#include "cpplox/AST/Expr.h"
 #include "cpplox/AST/PrettyPrinter.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"

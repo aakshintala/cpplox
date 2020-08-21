@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "cpplox/AST/Stmt.h"
+#include "cpplox/AST/NodeTypes.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Evaluator/Evaluator.h"
 

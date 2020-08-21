@@ -6,8 +6,7 @@
 #include <iterator>
 #include <vector>
 
-#include "cpplox/AST/Expr.h"
-#include "cpplox/AST/Stmt.h"
+#include "cpplox/AST/NodeTypes.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Types/Token.h"
 
@@ -19,7 +18,8 @@
 // program     → declaration* LOX_EOF;
 // declaration → varDecl | funcDecl | statement;
 // varDecl     → "var" IDENTIFIER ("=" expression)? ";" ;
-// funcDecl    → "fun" IDENTIFIER "(" parameters? ")" "{" declaration "}";
+// funcDecl    → "fun" IDENTIFIER funcBody;
+// funcBody     → "(" parameters? ")" "{" declaration "}";
 // statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
 // statement   → forStmt | returnStmt;
 // exprStmt    → expression ';' ;
@@ -48,6 +48,7 @@
 // primary     → NUMBER | STRING | "false" | "true" | "nil";
 // primary     → "(" expression ")";
 // primary     → IDENTIFIER;
+// primary     → "fun" funcBody;
 // Error Productions:
 // primary     → ("!=" | "==") equality;
 // primary     → (">" | ">=" | "<" | "<=") comparison;
@@ -78,7 +79,8 @@ class RDParser {
   void program();
   auto declaration() -> std::optional<StmtPtrVariant>;
   auto varDecl() -> StmtPtrVariant;
-  auto funcDecl(std::string kind) -> StmtPtrVariant;
+  auto funcBody(const std::string& kind) -> ExprPtrVariant;
+  auto funcDecl(const std::string& kind) -> StmtPtrVariant;
   auto parameters() -> std::vector<Types::Token>;
   auto statement() -> StmtPtrVariant;
   auto exprStmt() -> StmtPtrVariant;
@@ -128,6 +130,7 @@ class RDParser {
   [[nodiscard]] auto match(
       const std::initializer_list<Types::TokenType>& types) const -> bool;
   [[nodiscard]] auto match(Types::TokenType type) const -> bool;
+  [[nodiscard]] auto matchNext(Types::TokenType type) -> bool;
   [[nodiscard]] auto peek() const -> Types::Token;
   void reportError(const std::string& message);
   void synchronize();

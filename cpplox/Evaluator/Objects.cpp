@@ -2,11 +2,13 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace cpplox::Evaluator {
 
-FuncObj::FuncObj(const AST::FuncStmtPtr& decl) : declaration(decl) {}
+FuncObj::FuncObj(const AST::FuncExprPtr& declaration, std::string funcName)
+    : declaration(declaration), funcName(std::move(funcName)) {}
 
 auto FuncObj::arity() const -> size_t { return declaration->parameters.size(); }
 
@@ -18,8 +20,8 @@ auto FuncObj::getFnBody() const -> const std::vector<AST::StmtPtrVariant>& {
   return declaration->body;
 }
 
-auto FuncObj::toString() const -> std::string {
-  return "<fun_" + declaration->funcName.getLexeme() + ">";
+auto FuncObj::getFnName() const -> std::string {
+  return "<fun_" + funcName + ">";
 }
 
 BuiltinFunc::BuiltinFunc(std::string funcName)
@@ -39,11 +41,11 @@ auto areEqual(const LoxObject& left, const LoxObject& right) -> bool {
         // outer condition;
         return true;
       case 4:  // FuncObj*
-        return std::get<FuncObj*>(left)->toString()
-               == std::get<FuncObj*>(right)->toString();
+        return std::get<FuncObj*>(left)->getFnName()
+               == std::get<FuncObj*>(right)->getFnName();
       case 5:  // BuiltinFunc*
-        return std::get<BuiltinFunc*>(left)->toString()
-               == std::get<BuiltinFunc*>(right)->toString();
+        return std::get<BuiltinFunc*>(left)->getFnName()
+               == std::get<BuiltinFunc*>(right)->getFnName();
       default:
         static_assert(
             std::variant_size_v<LoxObject> == 6,
@@ -72,9 +74,9 @@ auto getObjectString(const LoxObject& object) -> std::string {
     case 3:  // nullptr
       return "nil";
     case 4:  // FuncObj*
-      return std::get<FuncObj*>(object)->toString();
+      return std::get<FuncObj*>(object)->getFnName();
     case 5:  // BuiltinFunc*
-      return std::get<BuiltinFunc*>(object)->toString();
+      return std::get<BuiltinFunc*>(object)->getFnName();
     default:
       static_assert(std::variant_size_v<LoxObject> == 6,
                     "Looks like you forgot to update the cases in "

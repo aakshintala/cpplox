@@ -1,6 +1,5 @@
 #ifndef TYPES_TOKEN_H
 #define TYPES_TOKEN_H
-#include <optional>
 #pragma once
 
 #include <string>

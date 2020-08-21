@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "cpplox/AST/Expr.h"
-#include "cpplox/AST/Stmt.h"
+#include "cpplox/AST/NodeTypes.h"
 
 namespace cpplox::AST {
 

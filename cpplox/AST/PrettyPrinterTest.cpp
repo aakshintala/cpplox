@@ -1,8 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "cpplox/AST/Expr.h"
 #include "cpplox/AST/PrettyPrinter.h"
-#include "cpplox/AST/Stmt.h"
 #include "cpplox/Types/Literal.h"
 #include "cpplox/Types/Token.h"
 

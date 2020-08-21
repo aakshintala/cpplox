@@ -7,8 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "cpplox/AST/Expr.h"
-#include "cpplox/AST/Stmt.h"
+#include "cpplox/AST/NodeTypes.h"
 #include "cpplox/ErrorsAndDebug/ErrorReporter.h"
 #include "cpplox/Evaluator/Environment.h"
 #include "cpplox/Evaluator/Objects.h"
@@ -21,6 +20,7 @@ using AST::BinaryExprPtr;
 using AST::CallExprPtr;
 using AST::ConditionalExprPtr;
 using AST::ExprPtrVariant;
+using AST::FuncExprPtr;
 using AST::FuncStmtPtr;
 using AST::GroupingExprPtr;
 using AST::LiteralExprPtr;
@@ -66,6 +66,7 @@ class Evaluator {
   auto evaluateAssignmentExpr(const AssignmentExprPtr& expr) -> LoxObject;
   auto evaluateLogicalExpr(const LogicalExprPtr& expr) -> LoxObject;
   auto evaluateCallExpr(const CallExprPtr& expr) -> LoxObject;
+  static auto evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject;
 
   // evaluation functions for Stmt types
   void evaluateExprStmt(const ExprStmtPtr& stmt);

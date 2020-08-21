@@ -4,21 +4,15 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "ASTNodes",
-    srcs = [
-        "Expr.cpp",
-        "Stmt.cpp",
-    ],
-    hdrs = [
-        "Expr.h",
-        "Stmt.h",
-    ],
+    srcs = ["NodeTypes.cpp"],
+    hdrs = ["NodeTypes.h"],
     deps = ["//cpplox/Types:types"],
 )
 
 cc_test(
     name = "ASTNodes_test",
     size = "small",
-    srcs = ["ExprTest.cpp"],
+    srcs = ["NodeTypesTest.cpp"],
     deps = [
         ":ASTNodes",
         "@googletest//:gtest_main",

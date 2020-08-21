@@ -6,7 +6,7 @@
 #include <string>
 #include <variant>
 
-#include "cpplox/AST/Stmt.h"
+#include "cpplox/AST/NodeTypes.h"
 #include "cpplox/Types/Token.h"
 #include "cpplox/Types/Uncopyable.h"
 
@@ -31,16 +31,16 @@ auto getObjectString(const LoxObject& object) -> std::string;
 auto isTrue(const LoxObject& object) -> bool;
 
 class FuncObj : public Types::Uncopyable {
-  const AST::FuncStmtPtr& declaration;
+  const AST::FuncExprPtr& declaration;
+  const std::string funcName;
 
  public:
-  explicit FuncObj(const AST::FuncStmtPtr& declaration);
+  explicit FuncObj(const AST::FuncExprPtr& declaration, std::string funcName);
   [[nodiscard]] auto arity() const -> size_t;
   [[nodiscard]] auto getParams() const -> const std::vector<Types::Token>&;
   [[nodiscard]] auto getFnBody() const
       -> const std::vector<AST::StmtPtrVariant>&;
   [[nodiscard]] auto getFnName() const -> std::string;
-  [[nodiscard]] auto toString() const -> std::string;
 };
 
 class BuiltinFunc : public Types::Uncopyable {
@@ -50,7 +50,7 @@ class BuiltinFunc : public Types::Uncopyable {
   explicit BuiltinFunc(std::string funcName);
   virtual auto arity() -> size_t = 0;
   virtual auto run() -> LoxObject = 0;
-  virtual auto toString() -> std::string = 0;
+  virtual auto getFnName() -> std::string = 0;
 };
 
 }  // namespace cpplox::Evaluator

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "cpplox/AST/Expr.h"
+#include "cpplox/AST/NodeTypes.h"
 
 TEST(LiteralExprPrintTest, emptyscript) {
   cpplox::Types::Literal literal = {"Testing LiteralExpr Printing"};

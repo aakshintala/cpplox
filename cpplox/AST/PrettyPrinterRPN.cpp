@@ -2,7 +2,7 @@
 // I've retained the file as an example of how to do RPN printing, but it's no
 // longer maintained and is incomplete.
 
-#include "cpplox/AST/Expr.h"
+#include "cpplox/AST/NodeTypes.h"
 #include "cpplox/AST/PrettyPrinter.h"
 #include "cpplox/Types/Literal.h"
 

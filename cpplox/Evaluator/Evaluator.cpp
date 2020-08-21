@@ -180,6 +180,7 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
     // Also just use the visitor pattern with double dispatch next time.
     return std::get<BuiltinFunc*>(callee)->run();
   }
+
   const FuncObj* funcObj = ([&]() -> FuncObj* {
     if (!std::holds_alternative<FuncObj*>(callee))
       throw reportRuntimeError(eReporter, expr->paren,
@@ -196,7 +197,7 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
                                  + " arguments. ");
 
   // Each function runs inside its own environment
-  environManager.createNewEnviron(funcObj->toString());
+  environManager.createNewEnviron(funcObj->getFnName());
 
   {  // Define each parameter with supplied argument
     const auto& params = funcObj->getParams();
@@ -216,9 +217,12 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
     result = ret.get();
   }
   // Discard the function's environment
-  environManager.discardCurrentEnviron(funcObj->toString());
-
+  environManager.discardCurrentEnviron(funcObj->getFnName());
   return result;
+}
+
+auto Evaluator::evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject {
+  return new FuncObj(expr, "");
 }
 
 auto Evaluator::evaluate(const ExprPtrVariant& expr) -> LoxObject {
@@ -239,12 +243,14 @@ auto Evaluator::evaluate(const ExprPtrVariant& expr) -> LoxObject {
       return evaluateVariableExpr(std::get<6>(expr));
     case 7:  // AssignmentExprPtr
       return evaluateAssignmentExpr(std::get<7>(expr));
-    case 8:  // LogicalExpr
+    case 8:  // LogicalExprPtr
       return evaluateLogicalExpr(std::get<8>(expr));
-    case 9:  // CallExpr
+    case 9:  // CallExprPtr
       return evaluateCallExpr(std::get<9>(expr));
+    case 10:  // FuncExprPtr
+      return evaluateFuncExpr(std::get<10>(expr));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 10,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 11,
                     "Looks like you forgot to update the cases in "
                     "Evaluator::Evaluate(const ExptrVariant&)!");
       return "";
@@ -303,13 +309,10 @@ void Evaluator::evaluateForStmt(const ForStmtPtr& stmt) {
 }
 
 void Evaluator::evaluateFuncStmt(const FuncStmtPtr& stmt) {
-  // We need to explicitly copy this because of the std::move on stmt
-  // We can't deref stmt->funcName in the define function below, as the compiler
-  // doesn't guarantee sequencing of the move and the deref (which means that
-  // the stmt variable may have moved before its deref'd to access funcName)
-  Token funcName = stmt->funcName;
   // Create a FuncObj for the function, and hand it off to environment to store
-  environManager.define(funcName, std::make_unique<FuncObj>(stmt));
+  environManager.define(
+      stmt->funcName,
+      std::make_unique<FuncObj>(stmt->funcExpr, stmt->funcName.getLexeme()));
 }
 
 void Evaluator::evaluateRetStmt(const RetStmtPtr& stmt) {
@@ -370,7 +373,7 @@ class clockBuiltin : public BuiltinFunc {
             std::chrono::high_resolution_clock::now().time_since_epoch())
             .count());
   }
-  auto toString() -> std::string override { return "< builtin-fn_clock>"; }
+  auto getFnName() -> std::string override { return "< builtin-fn_clock>"; }
 };
 
 Evaluator::Evaluator(ErrorReporter& eReporter)

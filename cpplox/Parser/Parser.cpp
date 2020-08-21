@@ -118,6 +118,13 @@ auto RDParser::match(const std::initializer_list<Types::TokenType>& types) const
   return result;
 }
 
+auto RDParser::matchNext(Types::TokenType type) -> bool {
+  advance();
+  bool result = match(type);
+  --currentIter;
+  return result;
+}
+
 auto RDParser::peek() const -> Token { return *currentIter; }
 
 void RDParser::reportError(const std::string& message) {
@@ -173,11 +180,11 @@ void RDParser::throwOnErrorProductions() {
                          &RDParser::multiplication);
 }
 
-// ---------------- Grammar Production Rules -----------------------------------
-// This is a recursive descent parser.
-// The grammar for Lox is declared above each of the functions.
-// The functions are sorted based on lowest to highest precedence;
-// program     → declaration* LOX_EOF;
+// ---------------- Grammar Production Rules
+// ----------------------------------- This is a recursive descent parser. The
+// grammar for Lox is declared above each of the functions. The functions are
+// sorted based on lowest to highest precedence; program     → declaration*
+// LOX_EOF;
 
 void RDParser::program() {
   try {
@@ -200,7 +207,7 @@ auto RDParser::declaration() -> std::optional<StmtPtrVariant> {
       return varDecl();
     }
 
-    if (match(TokenType::FUN)) {
+    if (match(TokenType::FUN) && matchNext(TokenType::IDENTIFIER)) {
       advance();
       return funcDecl("function");
     }
@@ -247,28 +254,31 @@ auto RDParser::parameters() -> std::vector<Token> {
   }());
   return params;
 }
+// funcBody     → "(" parameters? ")" "{" declaration "}";
+auto RDParser::funcBody(const std::string& kind) -> ExprPtrVariant {
+  consumeOrError(TokenType::LEFT_PAREN, "Expecte '(' after " + kind + " decl.");
+  // Grab any parameters for the function
+  std::vector<Token> params
+      = match(TokenType::RIGHT_PAREN) ? std::vector<Token>() : parameters();
+  consumeOrError(TokenType::RIGHT_PAREN,
+                 "Expecte ')' after " + kind + " params.");
+  consumeOrError(TokenType::LEFT_BRACE,
+                 "Expecte '{' after " + kind + " params.");
+  std::vector<StmtPtrVariant> fnBody;
+  while (!match(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+    if (auto optStmnt = declaration(); optStmnt.has_value())
+      fnBody.push_back(std::move(optStmnt.value()));
+  }
+  consumeOrError(TokenType::RIGHT_BRACE,
+                 "Expecte '}' after " + kind + " body.");
+  return AST::createFuncEPV(std::move(params), std::move(fnBody));
+}
 
-// funcDecl    → "fun" IDENTIFIER "(" parameters? ")" "{" declaration "}";
-auto RDParser::funcDecl(std::string kind) -> StmtPtrVariant {
+// funcDecl    → "fun" IDENTIFIER funcBody;
+auto RDParser::funcDecl(const std::string& kind) -> StmtPtrVariant {
   if (match(TokenType::IDENTIFIER)) {
-    Token funcName = getTokenAndAdvance();
-    consumeOrError(TokenType::LEFT_PAREN,
-                   "Expecte '(' after " + kind + " decl.");
-    // Grab any parameters for the function
-    std::vector<Token> params
-        = match(TokenType::RIGHT_PAREN) ? std::vector<Token>() : parameters();
-    consumeOrError(TokenType::RIGHT_PAREN,
-                   "Expecte ')' after " + kind + " params.");
-    consumeOrError(TokenType::LEFT_BRACE,
-                   "Expecte '{' after " + kind + " params.");
-    std::vector<StmtPtrVariant> fnBody;
-    while (!match(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-      if (auto optStmnt = declaration(); optStmnt.has_value())
-        fnBody.push_back(std::move(optStmnt.value()));
-    }
-    consumeOrError(TokenType::RIGHT_BRACE,
-                   "Expecte '}' after " + kind + " body.");
-    return AST::createFuncSPV(funcName, std::move(params), std::move(fnBody));
+    return AST::createFuncSPV(getTokenAndAdvance(),
+                              std::get<AST::FuncExprPtr>(funcBody(kind)));
   }
   throw error("Expected a " + kind + " name after the fun keyword");
 }
@@ -527,6 +537,7 @@ auto RDParser::arguments() -> std::vector<ExprPtrVariant> {
 
 // primary    → NUMBER | STRING | "false" | "true" | "nil";
 // primary    →  "(" expression ")" | IDENTIFIER;
+// primary     → "fun" funBody;
 //  Error Productions: primary    → ("!=" | "==") equality primary    →
 // (">" | ">=" | "<" | "<=") comparison primary    → ("+")addition primary →
 // ("/" | "*") multiplication;
@@ -538,6 +549,7 @@ auto RDParser::primary() -> ExprPtrVariant {
   if (match(TokenType::STRING)) return consumeOneLiteral();
   if (match(TokenType::LEFT_PAREN)) return consumeGroupingExpr();
   if (match(TokenType::IDENTIFIER)) return consumeVarExpr();
+  if (match(TokenType::FUN)) return funcBody("Anon-Function");
 
   // Check for known error productions. throws RDParseError;
   throwOnErrorProductions();
