@@ -197,7 +197,7 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
                                  + " arguments. ");
 
   // Each function runs inside its own environment
-  environManager.createNewEnviron(funcObj->getFnName());
+  environManager.createNewEnviron();
 
   {  // Define each parameter with supplied argument
     const auto& params = funcObj->getParams();
@@ -217,7 +217,7 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
     result = ret.get();
   }
   // Discard the function's environment
-  environManager.discardCurrentEnviron(funcObj->getFnName());
+  environManager.discardCurrentEnviron();
   return result;
 }
 
@@ -269,10 +269,9 @@ void Evaluator::evaluatePrintStmt(const PrintStmtPtr& stmt) {
 }
 
 void Evaluator::evaluateBlockStmt(const BlockStmtPtr& stmt) {
-  // TODO(aakshintala): Add a random number after block.
-  environManager.createNewEnviron("block");
+  environManager.createNewEnviron();
   evaluate(stmt->statements);
-  environManager.discardCurrentEnviron("block");
+  environManager.discardCurrentEnviron();
 }
 
 void Evaluator::evaluateVarStmt(const VarStmtPtr& stmt) {

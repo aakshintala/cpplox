@@ -19,8 +19,9 @@ using ErrorsAndDebug::ErrorReporter;
 class EnvironmentManager : public Types::Uncopyable {
  public:
   explicit EnvironmentManager(ErrorReporter& eReporter);
-  void createNewEnviron(std::string environName);
-  void discardCurrentEnviron(const std::string& environName);
+
+  void createNewEnviron();
+  void discardCurrentEnviron();
   void define(const Types::Token& varToken, LoxObject object);
   void define(const Types::Token& varToken, FuncUniqPtr function);
   void define(const Types::Token& varToken, BuiltinFuncUniqPtr function);
@@ -36,15 +37,14 @@ class EnvironmentManager : public Types::Uncopyable {
     // This constructor should only be used to construct the global environ.
     explicit Environment(ErrorReporter& eReporter);
     // For all other environs, use this one instead.
-    explicit Environment(ErrorReporter& eReporter, EnvironmentPtr parentEnviron,
-                         std::string environName);
+    explicit Environment(ErrorReporter& eReporter,
+                         EnvironmentPtr parentEnviron);
 
     auto assign(const Types::Token& varToken, LoxObject object) -> bool;
     void define(const Types::Token& varToken, LoxObject object);
     void define(const Types::Token& varToken, FuncUniqPtr function);
     void define(const Types::Token& varToken, BuiltinFuncUniqPtr function);
     auto get(const Types::Token& varToken) -> LoxObject;
-    auto getEnvironName() -> const std::string&;
     auto isGlobal() -> bool;
     auto releaseParentEnv() -> EnvironmentPtr;
 
@@ -52,7 +52,6 @@ class EnvironmentManager : public Types::Uncopyable {
     std::map<std::string, LoxObject> objects;
     ErrorReporter& eReporter;
     EnvironmentPtr parentEnviron = nullptr;
-    std::string environName = "Global";
 
     // The environment is repsonsible for the lifetimes of functions.
     // Do not access functions through this interface.

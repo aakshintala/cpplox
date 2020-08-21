@@ -17,11 +17,8 @@ EnvironmentManager::Environment::Environment(ErrorReporter& eReporter)
     : eReporter(eReporter) {}
 
 EnvironmentManager::Environment::Environment(ErrorReporter& eReporter,
-                                             EnvironmentPtr parentEnviron,
-                                             std::string environName)
-    : eReporter(eReporter),
-      parentEnviron(std::move(parentEnviron)),
-      environName(std::move(environName)) {}
+                                             EnvironmentPtr parentEnviron)
+    : eReporter(eReporter), parentEnviron(std::move(parentEnviron)) {}
 
 auto EnvironmentManager::Environment::assign(const Types::Token& varToken,
                                              LoxObject object) -> bool {
@@ -91,12 +88,8 @@ auto EnvironmentManager::Environment::get(const Types::Token& varToken)
       eReporter, varToken, "Attempt to access an undefined variable");
 }
 
-auto EnvironmentManager::Environment::getEnvironName() -> const std::string& {
-  return this->environName;
-}
-
 auto EnvironmentManager::Environment::isGlobal() -> bool {
-  return (environName == "Global" && parentEnviron == nullptr);
+  return (parentEnviron == nullptr);
 }
 
 auto EnvironmentManager::Environment::releaseParentEnv() -> EnvironmentPtr {
@@ -113,21 +106,19 @@ EnvironmentManager::EnvironmentManager(ErrorReporter& eReporter)
     : eReporter(eReporter),
       currEnviron(std::make_unique<Environment>(eReporter)) {}
 
-void EnvironmentManager::createNewEnviron(std::string environName) {
-  currEnviron = std::make_unique<Environment>(eReporter, std::move(currEnviron),
-                                              std::move(environName));
+void EnvironmentManager::createNewEnviron() {
+  currEnviron
+      = std::make_unique<Environment>(eReporter, std::move(currEnviron));
 }
 
-void EnvironmentManager::discardCurrentEnviron(const std::string& environName) {
+void EnvironmentManager::discardCurrentEnviron() {
   // Global environment should only be destroyed when the Environment Manager
   // goes away.
-  if ((!currEnviron->isGlobal())
-      && currEnviron->getEnvironName() == environName) {
+  if (!currEnviron->isGlobal()) {
     currEnviron = currEnviron->releaseParentEnv();
   } else {
-    eReporter.setError(-1, "Internal Error. Attempted to discard" + environName
-                               + " environment. Current environ is: "
-                               + currEnviron->getEnvironName());
+    eReporter.setError(
+        -1, "Internal Error. Attempted to discard Global environment.");
     throw ErrorsAndDebug::RuntimeError();
   }
 }
