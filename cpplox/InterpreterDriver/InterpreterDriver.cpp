@@ -1,5 +1,6 @@
 #include "cpplox/InterpreterDriver/InterpreterDriver.h"
 
+#include <chrono>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -121,11 +122,41 @@ void InterpreterDriver::interpret(const std::string& source) {
     // Store all syntactically correct statements so we can ensure that
     // references held by the Evaluator (functions, classes) are live.
     // Also permits us reconstruct evaluator state if need be.
+#ifdef PERF_DEBUG
+    auto scanStartTime = std::chrono::high_resolution_clock::now();
+    auto tokens = scan(source);
+    auto parseStartTime = std::chrono::high_resolution_clock::now();
+    lines.emplace_back(parse(tokens));
+    auto evalStartTime = std::chrono::high_resolution_clock::now();
+    evaluator.evaluate(lines.back());
+    auto evalEndTime = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Scanning took: "
+              << static_cast<double>(
+                     std::chrono::duration_cast<std::chrono::microseconds>(
+                         parseStartTime - scanStartTime)
+                         .count())
+              << " us" << std::endl;
+    std::cout << "Parsing took: "
+              << static_cast<double>(
+                     std::chrono::duration_cast<std::chrono::microseconds>(
+                         evalStartTime - parseStartTime)
+                         .count())
+              << " us" << std::endl;
+    std::cout << "Evaluation took: "
+              << static_cast<double>(
+                     std::chrono::duration_cast<std::chrono::microseconds>(
+                         evalEndTime - evalStartTime)
+                         .count())
+              << " us" << std::endl;
+#else
     lines.emplace_back(parse(scan(source)));
     evaluator.evaluate(lines.back());
+#endif  // PERF_DEBUG
     if (eReporter.getStatus() != LoxStatus::OK) {
       eReporter.printToStdErr();
     }
+
   } catch (const InterpreterError& e) {
     hadError = true;
     return;
