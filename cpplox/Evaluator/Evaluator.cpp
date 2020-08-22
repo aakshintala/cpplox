@@ -368,7 +368,8 @@ class clockBuiltin : public BuiltinFunc {
   auto arity() -> size_t override { return 0; }
   auto run() -> LoxObject override {
     return static_cast<double>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
+        //std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::high_resolution_clock::now().time_since_epoch())
             .count());
   }

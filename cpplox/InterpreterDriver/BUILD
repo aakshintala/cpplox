@@ -9,7 +9,7 @@ cc_library(
     copts = [
         # "-DPARSER_DEBUG",
         # "-DSCANNER_DEBUG",
-        "-DPERF_DEBUG",
+        # "-DPERF_DEBUG",
     ],
     deps = [
         "//cpplox/AST:ASTNodes",
