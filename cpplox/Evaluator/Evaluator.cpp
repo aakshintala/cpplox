@@ -13,12 +13,15 @@
 #include "cpplox/Types/Literal.h"
 #include "cpplox/Types/Token.h"
 
+#define EXPECT_TRUE(x) __builtin_expect(static_cast<int64_t>(x), 1)
+#define EXPECT_FALSE(x) __builtin_expect(static_cast<int64_t>(x), 0)
+
 namespace cpplox::Evaluator {
 
 // throws RuntimeError if right isn't a double
 auto Evaluator::getDouble(const Token& token, const LoxObject& right)
     -> double {
-  if (!std::holds_alternative<double>(right))
+  if (EXPECT_FALSE(!std::holds_alternative<double>(right)))
     throw reportRuntimeError(
         eReporter, token,
         "Attempted to perform arithmetic operation on non-numeric literal "
@@ -40,7 +43,7 @@ auto Evaluator::evaluateBinaryExpr(const BinaryExprPtr& expr) -> LoxObject {
       return getDouble(expr->op, left) - getDouble(expr->op, right);
     case TokenType::SLASH: {
       double denominator = getDouble(expr->op, right);
-      if (denominator == 0.0)
+      if (EXPECT_FALSE(denominator == 0.0))
         throw reportRuntimeError(eReporter, expr->op,
                                  "Division by zero is illegal");
       return getDouble(expr->op, left) / denominator;
@@ -137,7 +140,7 @@ auto match(const Token& token, Types::TokenType tType) -> bool {
 }
 
 auto doPostfixOp(const Token& op, const LoxObject& val) -> LoxObject {
-  if (std::holds_alternative<double>(val)) {
+  if (EXPECT_TRUE(std::holds_alternative<double>(val))) {
     double dVal = std::get<double>(val);
     if (match(op, TokenType::PLUS_PLUS)) return LoxObject(++dVal);
     if (match(op, TokenType::MINUS_MINUS)) return LoxObject(--dVal);
@@ -148,7 +151,7 @@ auto doPostfixOp(const Token& op, const LoxObject& val) -> LoxObject {
 
 auto Evaluator::evaluatePostfixExpr(const PostfixExprPtr& expr) -> LoxObject {
   LoxObject leftVal = evaluateExpr(expr->left);
-  if (std::holds_alternative<VariableExprPtr>(expr->left)) {
+  if (EXPECT_TRUE(std::holds_alternative<VariableExprPtr>(expr->left))) {
     environManager.assign((std::get<VariableExprPtr>(expr->left))->varName,
                           doPostfixOp(expr->op, leftVal));
   }
@@ -168,7 +171,7 @@ auto Evaluator::evaluateLogicalExpr(const LogicalExprPtr& expr) -> LoxObject {
 
 auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
   LoxObject callee = evaluateExpr(expr->callee);
-  if (std::holds_alternative<BuiltinFunc*>(callee)) {
+  if (EXPECT_FALSE(std::holds_alternative<BuiltinFunc*>(callee))) {
     // TODO(aakshintala): Currently this doesn't check arity or copy params, cos
     // we don't need that at the moment cos we just have one builtin: clock.
     // A correct implementation would look more like the rest of function call.
@@ -177,7 +180,7 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
   }
 
   const FuncObj* funcObj = ([&]() -> FuncObj* {
-    if (!std::holds_alternative<FuncObj*>(callee))
+    if (EXPECT_FALSE(!std::holds_alternative<FuncObj*>(callee)))
       throw reportRuntimeError(eReporter, expr->paren,
                                "Attempted to invoke a non-function");
     return std::get<FuncObj*>(callee);
@@ -185,7 +188,7 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
 
   // Throw error if arity doesn't match the number of arguments supplied
   if (size_t arity = funcObj->arity(), numArgs = expr->arguments.size();
-      arity != numArgs)
+      EXPECT_FALSE(arity != numArgs))
     throw reportRuntimeError(eReporter, expr->paren,
                              "Expected " + std::to_string(arity)
                                  + " arguments. Got " + std::to_string(numArgs)
@@ -372,7 +375,7 @@ auto Evaluator::evaluateStmts(const std::vector<AST::StmtPtrVariant>& stmts)
       if (result.has_value()) break;
     }
   } catch (const ErrorsAndDebug::RuntimeError& e) {
-    if (++numRunTimeErr > MAX_RUNTIME_ERR) {
+    if (EXPECT_FALSE(++numRunTimeErr > MAX_RUNTIME_ERR)) {
       std::cerr << "Too many errors occurred. Exiting evaluation." << std::endl;
       throw e;
     }

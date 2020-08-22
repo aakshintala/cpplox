@@ -8,6 +8,9 @@
 #include "Objects.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
 
+#define EXPECT_TRUE(x) __builtin_expect(static_cast<int64_t>(x), 1)
+#define EXPECT_FALSE(x) __builtin_expect(static_cast<int64_t>(x), 0)
+
 namespace cpplox::Evaluator {
 
 // ================= //
@@ -24,7 +27,7 @@ auto EnvironmentManager::Environment::assign(size_t hashedVarName,
     objects.insert_or_assign(hashedVarName, object);
     return true;
   }
-  if (parentEnviron)
+  if (EXPECT_TRUE(parentEnviron != nullptr))
     return parentEnviron->assign(hashedVarName, std::move(object));
 
   throw UndefinedVarAccess();
@@ -73,11 +76,12 @@ void EnvironmentManager::Environment::define(size_t hashedVarName,
 auto EnvironmentManager::Environment::get(size_t hashedVarName) -> LoxObject {
   auto iter = objects.find(hashedVarName);
   if (iter != objects.end()) {
-    if (std::holds_alternative<std::nullptr_t>(iter->second))
+    if (EXPECT_FALSE(std::holds_alternative<std::nullptr_t>(iter->second)))
       throw UninitializedVarAccess();
     return iter->second;
   }
-  if (parentEnviron) return parentEnviron->get(hashedVarName);
+  if (EXPECT_TRUE(parentEnviron != nullptr))
+    return parentEnviron->get(hashedVarName);
 
   throw UndefinedVarAccess();  // throws only in the Global Environ
 }
@@ -107,7 +111,7 @@ void EnvironmentManager::createNewEnviron() {
 void EnvironmentManager::discardCurrentEnviron() {
   // Global environment should only be destroyed when the Environment Manager
   // goes away.
-  if (!currEnviron->isGlobal()) {
+  if (EXPECT_TRUE(!currEnviron->isGlobal())) {
     currEnviron = currEnviron->releaseParentEnv();
   } else {
     eReporter.setError(
