@@ -74,12 +74,12 @@ auto EnvironmentManager::Environment::get(size_t hashedVarName) -> LoxObject {
   auto iter = objects.find(hashedVarName);
   if (iter != objects.end()) {
     if (std::holds_alternative<std::nullptr_t>(iter->second))
-      throw UndefinedVarAccess();
+      throw UninitializedVarAccess();
     return iter->second;
   }
   if (parentEnviron) return parentEnviron->get(hashedVarName);
 
-  throw UninitializedVarAccess();  // throws only in the Global Environ
+  throw UndefinedVarAccess();  // throws only in the Global Environ
 }
 
 auto EnvironmentManager::Environment::isGlobal() -> bool {
