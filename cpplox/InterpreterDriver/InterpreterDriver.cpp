@@ -128,7 +128,7 @@ void InterpreterDriver::interpret(const std::string& source) {
     auto parseStartTime = std::chrono::high_resolution_clock::now();
     lines.emplace_back(parse(tokens));
     auto evalStartTime = std::chrono::high_resolution_clock::now();
-    evaluator.evaluate(lines.back());
+    evaluator.evaluateStmts(lines.back());
     auto evalEndTime = std::chrono::high_resolution_clock::now();
 
     std::cout << "Scanning took: "
@@ -151,7 +151,7 @@ void InterpreterDriver::interpret(const std::string& source) {
               << " us" << std::endl;
 #else
     lines.emplace_back(parse(scan(source)));
-    evaluator.evaluate(lines.back());
+    evaluator.evaluateStmts(lines.back());
 #endif  // PERF_DEBUG
     if (eReporter.getStatus() != LoxStatus::OK) {
       eReporter.printToStdErr();

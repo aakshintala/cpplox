@@ -9,7 +9,6 @@
 #include <string>
 #include <variant>
 
-#include "Objects.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
 #include "cpplox/Types/Literal.h"
 #include "cpplox/Types/Token.h"
@@ -27,17 +26,12 @@ auto Evaluator::getDouble(const Token& token, const LoxObject& right)
   return std::get<double>(right);
 }
 
-// Return Exception Methods
-Evaluator::Return::Return(LoxObject value) : value(std::move(value)) {}
-
-auto Evaluator::Return::get() -> LoxObject { return std::move(value); };
-
 //===============================//
 // Expression Evaluation Methods //
 //===============================//
 auto Evaluator::evaluateBinaryExpr(const BinaryExprPtr& expr) -> LoxObject {
-  auto left = evaluate(expr->left);
-  auto right = evaluate(expr->right);
+  auto left = evaluateExpr(expr->left);
+  auto right = evaluateExpr(expr->right);
   switch (expr->op.getType()) {
     case TokenType::COMMA: return right;
     case TokenType::BANG_EQUAL: return !areEqual(left, right);
@@ -84,7 +78,7 @@ auto Evaluator::evaluateBinaryExpr(const BinaryExprPtr& expr) -> LoxObject {
 }
 
 auto Evaluator::evaluateGroupingExpr(const GroupingExprPtr& expr) -> LoxObject {
-  return evaluate(expr->expression);
+  return evaluateExpr(expr->expression);
 }
 
 namespace {
@@ -106,7 +100,7 @@ auto Evaluator::evaluateLiteralExpr(const LiteralExprPtr& expr) -> LoxObject {
 }
 
 auto Evaluator::evaluateUnaryExpr(const UnaryExprPtr& expr) -> LoxObject {
-  LoxObject right = evaluate(expr->right);
+  LoxObject right = evaluateExpr(expr->right);
   switch (expr->op.getType()) {
     case TokenType::BANG: return !isTrue(right);
     case TokenType::MINUS: return -getDouble(expr->op, right);
@@ -122,8 +116,9 @@ auto Evaluator::evaluateUnaryExpr(const UnaryExprPtr& expr) -> LoxObject {
 
 auto Evaluator::evaluateConditionalExpr(const ConditionalExprPtr& expr)
     -> LoxObject {
-  if (isTrue(evaluate(expr->condition))) return evaluate(expr->thenBranch);
-  return evaluate(expr->elseBranch);
+  if (isTrue(evaluateExpr(expr->condition)))
+    return evaluateExpr(expr->thenBranch);
+  return evaluateExpr(expr->elseBranch);
 }
 
 auto Evaluator::evaluateVariableExpr(const VariableExprPtr& expr) -> LoxObject {
@@ -132,7 +127,7 @@ auto Evaluator::evaluateVariableExpr(const VariableExprPtr& expr) -> LoxObject {
 
 auto Evaluator::evaluateAssignmentExpr(const AssignmentExprPtr& expr)
     -> LoxObject {
-  environManager.assign(expr->varName, evaluate(expr->right));
+  environManager.assign(expr->varName, evaluateExpr(expr->right));
   return environManager.get(expr->varName);
 }
 
@@ -152,7 +147,7 @@ auto doPostfixOp(const Token& op, const LoxObject& val) -> LoxObject {
 }  // namespace
 
 auto Evaluator::evaluatePostfixExpr(const PostfixExprPtr& expr) -> LoxObject {
-  LoxObject leftVal = evaluate(expr->left);
+  LoxObject leftVal = evaluateExpr(expr->left);
   if (std::holds_alternative<VariableExprPtr>(expr->left)) {
     environManager.assign((std::get<VariableExprPtr>(expr->left))->varName,
                           doPostfixOp(expr->op, leftVal));
@@ -161,18 +156,18 @@ auto Evaluator::evaluatePostfixExpr(const PostfixExprPtr& expr) -> LoxObject {
 }
 
 auto Evaluator::evaluateLogicalExpr(const LogicalExprPtr& expr) -> LoxObject {
-  LoxObject leftVal = evaluate(expr->left);
+  LoxObject leftVal = evaluateExpr(expr->left);
   if (expr->op.getType() == TokenType::OR)
-    return isTrue(leftVal) ? leftVal : evaluate(expr->right);
+    return isTrue(leftVal) ? leftVal : evaluateExpr(expr->right);
   if (expr->op.getType() == TokenType::AND)
-    return !isTrue(leftVal) ? leftVal : evaluate(expr->right);
+    return !isTrue(leftVal) ? leftVal : evaluateExpr(expr->right);
 
   throw reportRuntimeError(eReporter, expr->op,
                            "Illegal logical operator: " + expr->op.getLexeme());
 }
 
 auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
-  LoxObject callee = evaluate(expr->callee);
+  LoxObject callee = evaluateExpr(expr->callee);
   if (std::holds_alternative<BuiltinFunc*>(callee)) {
     // TODO(aakshintala): Currently this doesn't check arity or copy params, cos
     // we don't need that at the moment cos we just have one builtin: clock.
@@ -205,27 +200,26 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
     auto param = params.begin();
     auto arg = args.begin();
     for (; param != params.end() && arg != args.end(); ++param, ++arg) {
-      environManager.define(*param, evaluate(*arg));
+      environManager.define(*param, evaluateExpr(*arg));
     }
   }
 
   // Evaluate the function
-  LoxObject result = nullptr;
-  try {
-    evaluate(funcObj->getFnBody());
-  } catch (Return ret) {
-    result = ret.get();
-  }
-  // Discard the function's environment
+  std::optional<LoxObject> result = evaluateStmts(funcObj->getFnBodyStmts());
+
+  // Teardown environment created for function
   environManager.discardCurrentEnviron();
-  return result;
+
+  // return result or LoxObject(nullptr);
+  if (result.has_value()) return result.value();
+  return LoxObject(nullptr);
 }
 
 auto Evaluator::evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject {
-  return new FuncObj(expr, "");
+  return new FuncObj(expr, "LoxAnonFuncDoNotUseThisNameAADWAED");
 }
 
-auto Evaluator::evaluate(const ExprPtrVariant& expr) -> LoxObject {
+auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
   switch (expr.index()) {
     case 0:  // BinaryExprPtr
       return evaluateBinaryExpr(std::get<0>(expr));
@@ -260,67 +254,87 @@ auto Evaluator::evaluate(const ExprPtrVariant& expr) -> LoxObject {
 //==============================//
 // Statement Evaluation Methods //
 //==============================//
-void Evaluator::evaluateExprStmt(const ExprStmtPtr& stmt) {
-  evaluate(stmt->expression);
+auto Evaluator::evaluateExprStmt(const ExprStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  return evaluateExpr(stmt->expression);
 }
 
-void Evaluator::evaluatePrintStmt(const PrintStmtPtr& stmt) {
-  std::cout << getObjectString(evaluate(stmt->expression)) << std::endl;
+auto Evaluator::evaluatePrintStmt(const PrintStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  std::cout << getObjectString(evaluateExpr(stmt->expression)) << std::endl;
+  return std::nullopt;
 }
 
-void Evaluator::evaluateBlockStmt(const BlockStmtPtr& stmt) {
+auto Evaluator::evaluateBlockStmt(const BlockStmtPtr& stmt)
+    -> std::optional<LoxObject> {
   environManager.createNewEnviron();
-  evaluate(stmt->statements);
+  std::optional<LoxObject> result = evaluateStmts(stmt->statements);
   environManager.discardCurrentEnviron();
+  return result;
 }
 
-void Evaluator::evaluateVarStmt(const VarStmtPtr& stmt) {
+auto Evaluator::evaluateVarStmt(const VarStmtPtr& stmt)
+    -> std::optional<LoxObject> {
   if (stmt->initializer.has_value()) {
-    environManager.define(stmt->varName, evaluate(stmt->initializer.value()));
+    environManager.define(stmt->varName,
+                          evaluateExpr(stmt->initializer.value()));
   } else {
     environManager.define(stmt->varName, LoxObject(nullptr));
   }
+  return std::nullopt;
 }
 
-void Evaluator::evaluateIfStmt(const IfStmtPtr& stmt) {
-  if (isTrue(evaluate(stmt->condition)))
-    evaluate(stmt->thenBranch);
-  else if (stmt->elseBranch.has_value())
-    return evaluate(stmt->elseBranch.value());
+auto Evaluator::evaluateIfStmt(const IfStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  if (isTrue(evaluateExpr(stmt->condition)))
+    return evaluateStmt(stmt->thenBranch);
+  if (stmt->elseBranch.has_value())
+    return evaluateStmt(stmt->elseBranch.value());
+  return std::nullopt;
 }
 
-void Evaluator::evaluateWhileStmt(const WhileStmtPtr& stmt) {
-  while (isTrue(evaluate(stmt->condition))) {
-    evaluate(stmt->loopBody);
+auto Evaluator::evaluateWhileStmt(const WhileStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  std::optional<LoxObject> result = std::nullopt;
+  while (isTrue(evaluateExpr(stmt->condition)) && !result.has_value()) {
+    result = evaluateStmt(stmt->loopBody);
   }
+  return result;
 }
 
-void Evaluator::evaluateForStmt(const ForStmtPtr& stmt) {
-  if (stmt->initializer.has_value()) evaluate(stmt->initializer.value());
+auto Evaluator::evaluateForStmt(const ForStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  std::optional<LoxObject> result = std::nullopt;
+  if (stmt->initializer.has_value()) evaluateStmt(stmt->initializer.value());
   while (true) {
     if (stmt->condition.has_value()
-        && !isTrue(evaluate(stmt->condition.value()))) {
+        && !isTrue(evaluateExpr(stmt->condition.value())))
       break;
-    }
-    evaluate(stmt->loopBody);
-    if (stmt->increment.has_value()) evaluate(stmt->increment.value());
+    result = evaluateStmt(stmt->loopBody);
+    if (result.has_value()) break;
+    if (stmt->increment.has_value()) evaluateExpr(stmt->increment.value());
   }
+  return result;
 }
 
-void Evaluator::evaluateFuncStmt(const FuncStmtPtr& stmt) {
+auto Evaluator::evaluateFuncStmt(const FuncStmtPtr& stmt)
+    -> std::optional<LoxObject> {
   // Create a FuncObj for the function, and hand it off to environment to store
   environManager.define(
       stmt->funcName,
       std::make_unique<FuncObj>(stmt->funcExpr, stmt->funcName.getLexeme()));
+  return std::nullopt;
 }
 
-void Evaluator::evaluateRetStmt(const RetStmtPtr& stmt) {
-  LoxObject value
-      = stmt->value.has_value() ? evaluate(stmt->value.value()) : nullptr;
-  throw Return(std::move(value));
+auto Evaluator::evaluateRetStmt(const RetStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  return stmt->value.has_value()
+             ? std::make_optional(evaluateExpr(stmt->value.value()))
+             : std::nullopt;
 }
 
-void Evaluator::evaluate(const AST::StmtPtrVariant& stmt) {
+auto Evaluator::evaluateStmt(const AST::StmtPtrVariant& stmt)
+    -> std::optional<LoxObject> {
   switch (stmt.index()) {
     case 0:  // ExprStmtPtr
       return evaluateExprStmt(std::get<0>(stmt));
@@ -345,21 +359,25 @@ void Evaluator::evaluate(const AST::StmtPtrVariant& stmt) {
           std::variant_size_v<StmtPtrVariant> == 9,
           "Looks like you forgot to update the cases in "
           "PrettyPrinter::toString(const StmtPtrVariant& statement)!");
+      return std::nullopt;
   }
 }
 
-void Evaluator::evaluate(const std::vector<AST::StmtPtrVariant>& stmts) {
-  for (const AST::StmtPtrVariant& stmt : stmts) {
-    try {
-      evaluate(stmt);
-    } catch (const ErrorsAndDebug::RuntimeError& e) {
-      if (++numRunTimeErr > MAX_RUNTIME_ERR) {
-        std::cerr << "Too many errors occurred. Exiting evaluation."
-                  << std::endl;
-        throw e;
-      }
+auto Evaluator::evaluateStmts(const std::vector<AST::StmtPtrVariant>& stmts)
+    -> std::optional<LoxObject> {
+  std::optional<LoxObject> result = std::nullopt;
+  try {
+    for (const AST::StmtPtrVariant& stmt : stmts) {
+      result = evaluateStmt(stmt);
+      if (result.has_value()) break;
+    }
+  } catch (const ErrorsAndDebug::RuntimeError& e) {
+    if (++numRunTimeErr > MAX_RUNTIME_ERR) {
+      std::cerr << "Too many errors occurred. Exiting evaluation." << std::endl;
+      throw e;
     }
   }
+  return result;
 }
 
 class clockBuiltin : public BuiltinFunc {
@@ -368,8 +386,7 @@ class clockBuiltin : public BuiltinFunc {
   auto arity() -> size_t override { return 0; }
   auto run() -> LoxObject override {
     return static_cast<double>(
-        //std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now().time_since_epoch())
             .count());
   }

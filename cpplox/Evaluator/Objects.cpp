@@ -16,7 +16,8 @@ auto FuncObj::getParams() const -> const std::vector<Types::Token>& {
   return declaration->parameters;
 }
 
-auto FuncObj::getFnBody() const -> const std::vector<AST::StmtPtrVariant>& {
+auto FuncObj::getFnBodyStmts() const
+    -> const std::vector<AST::StmtPtrVariant>& {
   return declaration->body;
 }
 

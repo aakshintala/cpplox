@@ -38,7 +38,7 @@ class FuncObj : public Types::Uncopyable {
   explicit FuncObj(const AST::FuncExprPtr& declaration, std::string funcName);
   [[nodiscard]] auto arity() const -> size_t;
   [[nodiscard]] auto getParams() const -> const std::vector<Types::Token>&;
-  [[nodiscard]] auto getFnBody() const
+  [[nodiscard]] auto getFnBodyStmts() const
       -> const std::vector<AST::StmtPtrVariant>&;
   [[nodiscard]] auto getFnName() const -> const std::string&;
 };

@@ -50,9 +50,11 @@ using ErrorsAndDebug::ErrorReporter;
 class Evaluator {
  public:
   explicit Evaluator(ErrorReporter& eReporter);
-  void evaluate(const AST::StmtPtrVariant& stmt);
-  auto evaluate(const ExprPtrVariant& expr) -> LoxObject;
-  void evaluate(const std::vector<AST::StmtPtrVariant>& stmts);
+  auto evaluateExpr(const ExprPtrVariant& expr) -> LoxObject;
+  auto evaluateStmt(const AST::StmtPtrVariant& stmt)
+      -> std::optional<LoxObject>;
+  auto evaluateStmts(const std::vector<AST::StmtPtrVariant>& stmts)
+      -> std::optional<LoxObject>;
 
  private:
   // evaluation functions for Expr types
@@ -69,23 +71,15 @@ class Evaluator {
   static auto evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject;
 
   // evaluation functions for Stmt types
-  void evaluateExprStmt(const ExprStmtPtr& stmt);
-  void evaluatePrintStmt(const PrintStmtPtr& stmt);
-  void evaluateBlockStmt(const BlockStmtPtr& stmt);
-  void evaluateVarStmt(const VarStmtPtr& stmt);
-  void evaluateIfStmt(const IfStmtPtr& stmt);
-  void evaluateWhileStmt(const WhileStmtPtr& stmt);
-  void evaluateForStmt(const ForStmtPtr& stmt);
-  void evaluateFuncStmt(const FuncStmtPtr& stmt);
-  void evaluateRetStmt(const RetStmtPtr& stmt);
-
-  class Return : std::exception {
-    LoxObject value;
-
-   public:
-    explicit Return(LoxObject value);
-    auto get() -> LoxObject;
-  };
+  auto evaluateExprStmt(const ExprStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluatePrintStmt(const PrintStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateBlockStmt(const BlockStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateVarStmt(const VarStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateIfStmt(const IfStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateWhileStmt(const WhileStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateForStmt(const ForStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateFuncStmt(const FuncStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateRetStmt(const RetStmtPtr& stmt) -> std::optional<LoxObject>;
 
   // throws RuntimeError if right isn't a double
   auto getDouble(const Token& token, const LoxObject& right) -> double;
