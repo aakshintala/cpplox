@@ -1,5 +1,6 @@
 #ifndef CPPLOX_EVALUATOR_ENVIRONMENT__H
 #define CPPLOX_EVALUATOR_ENVIRONMENT__H
+#include <exception>
 #pragma once
 
 #include <cstddef>
@@ -32,25 +33,24 @@ class EnvironmentManager : public Types::Uncopyable {
   class Environment;
   using EnvironmentPtr = std::unique_ptr<Environment>;
 
+  class UndefinedVarAccess : public std::exception {};
+  class UninitializedVarAccess : public std::exception {};
+
   class Environment : public Types::Uncopyable {
    public:
-    // This constructor should only be used to construct the global environ.
-    explicit Environment(ErrorReporter& eReporter);
-    // For all other environs, use this one instead.
-    explicit Environment(ErrorReporter& eReporter,
-                         EnvironmentPtr parentEnviron);
+    // For all environs other than Global, use this constructor.
+    explicit Environment(EnvironmentPtr parentEnviron);
 
-    auto assign(const Types::Token& varToken, LoxObject object) -> bool;
-    void define(const Types::Token& varToken, LoxObject object);
-    void define(const Types::Token& varToken, FuncUniqPtr function);
-    void define(const Types::Token& varToken, BuiltinFuncUniqPtr function);
-    auto get(const Types::Token& varToken) -> LoxObject;
+    auto assign(size_t hashedVarName, LoxObject object) -> bool;
+    void define(size_t hashedVarName, LoxObject object);
+    void define(size_t hashedVarName, FuncUniqPtr function);
+    void define(size_t hashedVarName, BuiltinFuncUniqPtr function);
+    auto get(size_t hashedVarName) -> LoxObject;
     auto isGlobal() -> bool;
     auto releaseParentEnv() -> EnvironmentPtr;
 
    private:
-    std::map<std::string, LoxObject> objects;
-    ErrorReporter& eReporter;
+    std::map<size_t, LoxObject> objects;
     EnvironmentPtr parentEnviron = nullptr;
 
     // The environment is repsonsible for the lifetimes of functions.
@@ -62,6 +62,7 @@ class EnvironmentManager : public Types::Uncopyable {
 
   ErrorReporter& eReporter;
   EnvironmentPtr currEnviron;
+  std::hash<std::string> hasher;
 };
 
 }  // namespace cpplox::Evaluator
