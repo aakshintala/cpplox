@@ -20,9 +20,7 @@ auto FuncObj::getFnBody() const -> const std::vector<AST::StmtPtrVariant>& {
   return declaration->body;
 }
 
-auto FuncObj::getFnName() const -> std::string {
-  return "<fun_" + funcName + ">";
-}
+auto FuncObj::getFnName() const -> const std::string& { return funcName; }
 
 BuiltinFunc::BuiltinFunc(std::string funcName)
     : funcName(std::move(funcName)) {}

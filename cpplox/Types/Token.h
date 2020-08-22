@@ -74,10 +74,10 @@ class Token {
 
   [[nodiscard]] auto toString() const -> std::string;
   [[nodiscard]] auto getType() const -> TokenType;
-  [[nodiscard]] auto getTypeString() const -> std::string;
+  [[nodiscard]] auto getTypeString() const -> const std::string&;
   [[nodiscard]] auto getLine() const -> int;
-  [[nodiscard]] auto getLexeme() const -> std::string;
-  [[nodiscard]] auto getOptionalLiteral() const -> OptionalLiteral;
+  [[nodiscard]] auto getLexeme() const -> const std::string&;
+  [[nodiscard]] auto getOptionalLiteral() const -> const OptionalLiteral&;
 
  private:
   const TokenType type;

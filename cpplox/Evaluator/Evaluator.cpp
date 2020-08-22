@@ -372,7 +372,7 @@ class clockBuiltin : public BuiltinFunc {
             std::chrono::high_resolution_clock::now().time_since_epoch())
             .count());
   }
-  auto getFnName() -> std::string override { return "< builtin-fn_clock>"; }
+  auto getFnName() -> std::string override { return "< builtin-fn_clock >"; }
 };
 
 Evaluator::Evaluator(ErrorReporter& eReporter)

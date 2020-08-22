@@ -40,7 +40,7 @@ class FuncObj : public Types::Uncopyable {
   [[nodiscard]] auto getParams() const -> const std::vector<Types::Token>&;
   [[nodiscard]] auto getFnBody() const
       -> const std::vector<AST::StmtPtrVariant>&;
-  [[nodiscard]] auto getFnName() const -> std::string;
+  [[nodiscard]] auto getFnName() const -> const std::string&;
 };
 
 class BuiltinFunc : public Types::Uncopyable {

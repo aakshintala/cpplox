@@ -9,7 +9,7 @@
 namespace cpplox::Types {
 
 namespace {
-auto TokenTypeString(const TokenType value) -> std::string {
+auto TokenTypeString(const TokenType value) -> const std::string& {
   static const std::map<TokenType, std::string> lookUpTable{
       {TokenType::LEFT_PAREN, "LEFT_PAREN"},
       {TokenType::RIGHT_PAREN, "RIGHT_PAREN"},
@@ -86,11 +86,11 @@ auto Token::toString() const -> std::string {
 }
 
 auto Token::getType() const -> TokenType { return this->type; }
-auto Token::getTypeString() const -> std::string {
+auto Token::getTypeString() const -> const std::string& {
   return TokenTypeString(this->type);
 }
-auto Token::getLexeme() const -> std::string { return this->lexeme; };
-auto Token::getOptionalLiteral() const -> OptionalLiteral {
+auto Token::getLexeme() const -> const std::string& { return this->lexeme; };
+auto Token::getOptionalLiteral() const -> const OptionalLiteral& {
   return this->literal;
 }
 auto Token::getLine() const -> int { return this->line; }
