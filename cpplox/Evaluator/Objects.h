@@ -1,8 +1,8 @@
 #ifndef CPPLOX_EVALUATOR_FUNCTION__H
 #define CPPLOX_EVALUATOR_FUNCTION__H
-#include <memory>
 #pragma once
 
+#include <memory>
 #include <string>
 #include <variant>
 
@@ -12,17 +12,13 @@
 
 namespace cpplox::Evaluator {
 class FuncObj;
-using FuncUniqPtr = std::unique_ptr<FuncObj>;
+using FuncShrdPtr = std::shared_ptr<FuncObj>;
 
 class BuiltinFunc;
-using BuiltinFuncUniqPtr = std::unique_ptr<BuiltinFunc>;
+using BuiltinFuncShrdPtr = std::shared_ptr<BuiltinFunc>;
 
-// A raw pointer to the FuncObj is provided here to allow access to the
-// underlying FuncObj without transferring ownership. The underlying object
-// is guaranteed to exist at least as long as the caller; Do not store
-// LoxObjects
 using LoxObject = std::variant<std::string, double, bool, std::nullptr_t,
-                               FuncObj*, BuiltinFunc*>;
+                               FuncShrdPtr, BuiltinFuncShrdPtr>;
 
 auto areEqual(const LoxObject& left, const LoxObject& right) -> bool;
 
@@ -30,24 +26,33 @@ auto getObjectString(const LoxObject& object) -> std::string;
 
 auto isTrue(const LoxObject& object) -> bool;
 
+class Environment;
+
 class FuncObj : public Types::Uncopyable {
   const AST::FuncExprPtr& declaration;
   const std::string funcName;
+  std::shared_ptr<Environment> closure;
 
  public:
-  explicit FuncObj(const AST::FuncExprPtr& declaration, std::string funcName);
+  explicit FuncObj(const AST::FuncExprPtr& declaration, std::string funcName,
+                   std::shared_ptr<Environment> closure);
+
   [[nodiscard]] auto arity() const -> size_t;
-  [[nodiscard]] auto getParams() const -> const std::vector<Types::Token>&;
+  [[nodiscard]] auto getClosure() const -> std::shared_ptr<Environment>;
   [[nodiscard]] auto getFnBodyStmts() const
       -> const std::vector<AST::StmtPtrVariant>&;
   [[nodiscard]] auto getFnName() const -> const std::string&;
+  [[nodiscard]] auto getParams() const -> const std::vector<Types::Token>&;
 };
 
 class BuiltinFunc : public Types::Uncopyable {
   std::string funcName = "";
+  std::shared_ptr<Environment> closure;
 
  public:
-  explicit BuiltinFunc(std::string funcName);
+  explicit BuiltinFunc(std::string funcName,
+                       std::shared_ptr<Environment> closure);
+
   virtual auto arity() -> size_t = 0;
   virtual auto run() -> LoxObject = 0;
   virtual auto getFnName() -> std::string = 0;

@@ -1,8 +1,8 @@
 #ifndef CPPLOX_EVALUATOR_EVALUATOR__H
 #define CPPLOX_EVALUATOR_EVALUATOR__H
-#include <exception>
 #pragma once
 
+#include <exception>
 #include <memory>
 #include <string>
 #include <vector>
@@ -68,7 +68,7 @@ class Evaluator {
   auto evaluateAssignmentExpr(const AssignmentExprPtr& expr) -> LoxObject;
   auto evaluateLogicalExpr(const LogicalExprPtr& expr) -> LoxObject;
   auto evaluateCallExpr(const CallExprPtr& expr) -> LoxObject;
-  static auto evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject;
+  auto evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject;
 
   // evaluation functions for Stmt types
   auto evaluateExprStmt(const ExprStmtPtr& stmt) -> std::optional<LoxObject>;

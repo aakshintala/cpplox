@@ -26,12 +26,12 @@ auto isAlphaNumeric(char c) -> bool { return isAlpha(c) || isDigit(c); }
 auto ReservedOrIdentifier(const std::string& str) -> TokenType {
   static const std::map<std::string, TokenType> lookUpTable{
       {"and", TokenType::AND},       {"class", TokenType::CLASS},
-      {"else", TokenType::ELSE},     {"false", TokenType::FALSE},
+      {"else", TokenType::ELSE},     {"false", TokenType::LOX_FALSE},
       {"fun", TokenType::FUN},       {"for", TokenType::FOR},
       {"if", TokenType::IF},         {"nil", TokenType::NIL},
       {"or", TokenType::OR},         {"print", TokenType::PRINT},
       {"return", TokenType::RETURN}, {"super", TokenType::SUPER},
-      {"this", TokenType::THIS},     {"true", TokenType::TRUE},
+      {"this", TokenType::THIS},     {"true", TokenType::LOX_TRUE},
       {"var", TokenType::VAR},       {"while", TokenType::WHILE}};
 
   auto iter = lookUpTable.find(str);

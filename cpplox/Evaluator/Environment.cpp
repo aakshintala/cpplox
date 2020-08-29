@@ -2,10 +2,12 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <utility>
 #include <variant>
 
 #include "Objects.h"
+#include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
 
 #define EXPECT_TRUE(x) __builtin_expect(static_cast<int64_t>(x), 1)
@@ -13,15 +15,18 @@
 
 namespace cpplox::Evaluator {
 
+namespace {
+class UndefinedVarAccess : public std::exception {};
+class UninitializedVarAccess : public std::exception {};
+}  // namespace
+
 // ================= //
 // class Environment
 // ================= //
-
-EnvironmentManager::Environment::Environment(EnvironmentPtr parentEnviron)
+Environment::Environment(EnvironmentPtr parentEnviron)
     : parentEnviron(std::move(parentEnviron)) {}
 
-auto EnvironmentManager::Environment::assign(size_t hashedVarName,
-                                             LoxObject object) -> bool {
+auto Environment::assign(size_t hashedVarName, LoxObject object) -> bool {
   auto iter = objects.find(hashedVarName);
   if (iter != objects.end()) {
     objects.insert_or_assign(hashedVarName, object);
@@ -33,49 +38,23 @@ auto EnvironmentManager::Environment::assign(size_t hashedVarName,
   throw UndefinedVarAccess();
 }
 
-void EnvironmentManager::Environment::define(size_t hashedVarName,
-                                             LoxObject object) {
+void Environment::define(size_t hashedVarName, LoxObject object) {
   objects.insert_or_assign(hashedVarName, object);
 }
 
-void EnvironmentManager::Environment::define(size_t hashedVarName,
-                                             FuncUniqPtr function) {
-  // Free the older function FuncObj if one exists.
-  // We technically don't need to do this, but it's good hygiene.
-  if (auto iter = objects.find(hashedVarName); iter != objects.end()) {
-    funcOwnerVec.remove_if([iter](const FuncUniqPtr& funcObjPtr) -> bool {
-      return std::get<FuncObj*>(iter->second) == funcObjPtr.get();
-    });
-  }
-
-  // Insert a LoxObject with a raw ptr to the FuncObj into the object map;
-  objects.insert_or_assign(hashedVarName, LoxObject(function.get()));
-
-  // Assume ownership of the function's FuncObj
-  funcOwnerVec.push_back(std::move(function));
+void Environment::define(size_t hashedVarName, FuncShrdPtr function) {
+  // Insert a LoxObject with a shared_ptr to the FuncObj into the object map;
+  objects.insert_or_assign(hashedVarName, LoxObject(function));
 }
 
-void EnvironmentManager::Environment::define(size_t hashedVarName,
-                                             BuiltinFuncUniqPtr function) {
-  // Free the older BuiltinFunc if one exists.
-  // We technically don't need to do this, but it's good hygiene.
-  if (auto iter = objects.find(hashedVarName); iter != objects.end()) {
-    builtinfuncOwnerVec.remove_if(
-        [iter](const BuiltinFuncUniqPtr& funcObjPtr) -> bool {
-          return std::get<BuiltinFunc*>(iter->second) == funcObjPtr.get();
-        });
-  }
-
-  // Store a LoxObject with a raw ptr to the BuiltinFunc;
-  objects.insert_or_assign(hashedVarName, LoxObject(function.get()));
-
-  // Assume ownership of the function's BuiltinFunc
-  builtinfuncOwnerVec.push_back(std::move(function));
+void Environment::define(size_t hashedVarName, BuiltinFuncShrdPtr function) {
+  // Store a LoxObject with the shared_ptr to the BuiltinFunc;
+  objects.insert_or_assign(hashedVarName, LoxObject(function));
 }
 
-auto EnvironmentManager::Environment::get(size_t hashedVarName) -> LoxObject {
+auto Environment::get(size_t hashedVarName) -> LoxObject {
   auto iter = objects.find(hashedVarName);
-  if (iter != objects.end()) {
+  if (EXPECT_TRUE(iter != objects.end())) {
     if (EXPECT_FALSE(std::holds_alternative<std::nullptr_t>(iter->second)))
       throw UninitializedVarAccess();
     return iter->second;
@@ -86,37 +65,52 @@ auto EnvironmentManager::Environment::get(size_t hashedVarName) -> LoxObject {
   throw UndefinedVarAccess();  // throws only in the Global Environ
 }
 
-auto EnvironmentManager::Environment::isGlobal() -> bool {
-  return (parentEnviron == nullptr);
-}
+auto Environment::isGlobal() -> bool { return (parentEnviron == nullptr); }
 
-auto EnvironmentManager::Environment::releaseParentEnv() -> EnvironmentPtr {
-  // Safe to not set parentEnviron to nullptr cos as soon as this function
-  // returns this environment goes out of scope and the unique_ptr mechanism
-  // takes care of deleting this environemnt.
-  return std::move(parentEnviron);
-}
+auto Environment::getParentEnv() -> EnvironmentPtr { return parentEnviron; }
 
 // ======================== //
 // class EnvironmentManager
 // ======================== //
 EnvironmentManager::EnvironmentManager(ErrorReporter& eReporter)
     : eReporter(eReporter),
-      currEnviron(std::make_unique<Environment>(nullptr)) {}
-
-void EnvironmentManager::createNewEnviron() {
-  currEnviron = std::make_unique<Environment>(std::move(currEnviron));
+      currEnviron(std::make_shared<Environment>(nullptr)) {
+#ifdef ENVIRON_DEBUG
+  ErrorsAndDebug::debugPrint(
+      "EnvironmentManager is now alive! Global Envrion = "
+      + std::to_string((pointer_t)currEnviron.get()));
+#endif
 }
 
-void EnvironmentManager::discardCurrentEnviron() {
+void EnvironmentManager::createNewEnviron(const std::string& caller) {
+  currEnviron = std::make_shared<Environment>(currEnviron);
+#ifdef ENVIRON_DEBUG
+  ErrorsAndDebug::debugPrint(caller + " requested new environ: "
+                             + std::to_string((pointer_t)currEnviron.get())
+                             + ".");
+#endif
+}
+
+void EnvironmentManager::discardEnvironsTill(
+    const Environment::EnvironmentPtr& environToRestore,
+    const std::string& caller) {
+#ifdef ENVIRON_DEBUG
+  ErrorsAndDebug::debugPrint("discardEnvironsTill( "
+                             + std::to_string((pointer_t)environToRestore.get())
+                             + " ) called by " + caller + ". CurrEnviron: "
+                             + std::to_string((pointer_t)currEnviron.get())
+                             + ".");
+#endif
   // Global environment should only be destroyed when the Environment Manager
   // goes away.
-  if (EXPECT_TRUE(!currEnviron->isGlobal())) {
-    currEnviron = currEnviron->releaseParentEnv();
-  } else {
-    eReporter.setError(
-        -1, "Internal Error. Attempted to discard Global environment.");
-    throw ErrorsAndDebug::RuntimeError();
+  while (EXPECT_TRUE(!currEnviron->isGlobal()
+                     && currEnviron.get() != environToRestore.get())) {
+#ifdef ENVIRON_DEBUG
+    ErrorsAndDebug::debugPrint("Discarding environ "
+                               + std::to_string((pointer_t)currEnviron.get())
+                               + ".");
+#endif
+    currEnviron = currEnviron->getParentEnv();
   }
 }
 
@@ -126,12 +120,12 @@ void EnvironmentManager::define(const Types::Token& varToken,
 }
 
 void EnvironmentManager::define(const Types::Token& varToken,
-                                FuncUniqPtr function) {
+                                FuncShrdPtr function) {
   currEnviron->define(hasher(varToken.getLexeme()), std::move(function));
 }
 
 void EnvironmentManager::define(const Types::Token& varToken,
-                                BuiltinFuncUniqPtr function) {
+                                BuiltinFuncShrdPtr function) {
   currEnviron->define(hasher(varToken.getLexeme()), std::move(function));
 }
 
@@ -155,6 +149,21 @@ auto EnvironmentManager::get(const Types::Token& varToken) -> LoxObject {
     throw ErrorsAndDebug::reportRuntimeError(
         eReporter, varToken, "Attempted to access an uninitialized variable.");
   }
+}
+
+auto EnvironmentManager::getCurrEnv() -> Environment::EnvironmentPtr {
+  return currEnviron;
+}
+
+void EnvironmentManager::setCurrEnv(Environment::EnvironmentPtr newCurr,
+                                    const std::string& caller) {
+#ifdef ENVIRON_DEBUG
+  ErrorsAndDebug::debugPrint(
+      caller + " requested setting currEnviron to: "
+      + std::to_string((pointer_t)newCurr.get())
+      + ". CurrEnviron: " + std::to_string((pointer_t)currEnviron.get()) + ".");
+#endif
+  currEnviron = std::move(newCurr);
 }
 
 }  // namespace cpplox::Evaluator

@@ -40,7 +40,7 @@ auto TokenTypeString(const TokenType value) -> const std::string& {
       {TokenType::AND, "AND"},
       {TokenType::CLASS, "CLASS"},
       {TokenType::ELSE, "ELSE"},
-      {TokenType::FALSE, "FALSE"},
+      {TokenType::LOX_FALSE, "FALSE"},
       {TokenType::FUN, "FUN"},
       {TokenType::FOR, "FOR"},
       {TokenType::IF, "IF"},
@@ -50,7 +50,7 @@ auto TokenTypeString(const TokenType value) -> const std::string& {
       {TokenType::RETURN, "RETURN"},
       {TokenType::SUPER, "SUPER"},
       {TokenType::THIS, "THIS"},
-      {TokenType::TRUE, "TRUE"},
+      {TokenType::LOX_TRUE, "TRUE"},
       {TokenType::VAR, "VAR"},
       {TokenType::WHILE, "WHILE"},
       {TokenType::LOX_EOF, "EOF"}};

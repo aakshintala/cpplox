@@ -544,8 +544,8 @@ auto RDParser::arguments() -> std::vector<ExprPtrVariant> {
 // (">" | ">=" | "<" | "<=") comparison primary    → ("+")addition primary →
 // ("/" | "*") multiplication;
 auto RDParser::primary() -> ExprPtrVariant {
-  if (match(TokenType::FALSE)) return consumeOneLiteral("false");
-  if (match(TokenType::TRUE)) return consumeOneLiteral("true");
+  if (match(TokenType::LOX_FALSE)) return consumeOneLiteral("false");
+  if (match(TokenType::LOX_TRUE)) return consumeOneLiteral("true");
   if (match(TokenType::NIL)) return consumeOneLiteral("nil");
   if (match(TokenType::NUMBER)) return consumeOneLiteral();
   if (match(TokenType::STRING)) return consumeOneLiteral();

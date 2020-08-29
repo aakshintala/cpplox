@@ -9,7 +9,10 @@
 #include <string>
 #include <variant>
 
+#include "cpplox/AST/PrettyPrinter.h"
+#include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
+#include "cpplox/Evaluator/Objects.h"
 #include "cpplox/Types/Literal.h"
 #include "cpplox/Types/Token.h"
 
@@ -171,19 +174,25 @@ auto Evaluator::evaluateLogicalExpr(const LogicalExprPtr& expr) -> LoxObject {
 
 auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
   LoxObject callee = evaluateExpr(expr->callee);
-  if (EXPECT_FALSE(std::holds_alternative<BuiltinFunc*>(callee))) {
+
+#ifdef EVAL_DEBUG
+  ErrorsAndDebug::debugPrint("evaluateCallExpr called. Callee:"
+                             + getObjectString(callee));
+#endif  // EVAL_DEBUG
+
+  if (EXPECT_FALSE(std::holds_alternative<BuiltinFuncShrdPtr>(callee))) {
     // TODO(aakshintala): Currently this doesn't check arity or copy params, cos
     // we don't need that at the moment cos we just have one builtin: clock.
     // A correct implementation would look more like the rest of function call.
     // Also just use the visitor pattern with double dispatch next time.
-    return std::get<BuiltinFunc*>(callee)->run();
+    return std::get<BuiltinFuncShrdPtr>(callee)->run();
   }
 
-  const FuncObj* funcObj = ([&]() -> FuncObj* {
-    if (EXPECT_FALSE(!std::holds_alternative<FuncObj*>(callee)))
+  const FuncShrdPtr funcObj = ([&]() -> FuncShrdPtr {
+    if (EXPECT_FALSE(!std::holds_alternative<FuncShrdPtr>(callee)))
       throw reportRuntimeError(eReporter, expr->paren,
                                "Attempted to invoke a non-function");
-    return std::get<FuncObj*>(callee);
+    return std::get<FuncShrdPtr>(callee);
   })();
 
   // Throw error if arity doesn't match the number of arguments supplied
@@ -194,24 +203,43 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
                                  + " arguments. Got " + std::to_string(numArgs)
                                  + " arguments. ");
 
-  // Each function runs inside its own environment
+  // Evaluate Arguments before switching to the next context as the arguments
+  // may rely on values in this context (e.g., passing a local variable to a
+  // function call.)
+  std::vector<LoxObject> evaldArgs;
+  for (const auto& arg : expr->arguments)
+    evaldArgs.push_back(evaluateExpr(arg));
+
+  // Save caller's environ so we can restore it later
+  auto environToRestore = environManager.getCurrEnv();
+  // Set the currentEnviron to the function's closure,
+  environManager.setCurrEnv(funcObj->getClosure());
+  // Create a new Environ for the function so it doesn't dirty the closure.
   environManager.createNewEnviron();
 
-  {  // Define each parameter with supplied argument
+  {  // Define each parameter with evaluated argument
     const auto& params = funcObj->getParams();
-    const auto& args = expr->arguments;
     auto param = params.begin();
-    auto arg = args.begin();
-    for (; param != params.end() && arg != args.end(); ++param, ++arg) {
-      environManager.define(*param, evaluateExpr(*arg));
+    auto arg = evaldArgs.begin();
+    for (; param != params.end() && arg != evaldArgs.end(); ++param, ++arg) {
+      environManager.define(*param, *arg);
     }
   }
+
+#ifdef EVAL_DEBUG
+  ErrorsAndDebug::debugPrint("FnBodyStmts:");
+  for (const auto& stmt :
+       AST::PrettyPrinter::toString(funcObj->getFnBodyStmts()))
+    ErrorsAndDebug::debugPrint(stmt);
+#endif  // EVAL_DEBUG
 
   // Evaluate the function
   std::optional<LoxObject> result = evaluateStmts(funcObj->getFnBodyStmts());
 
-  // Teardown environment created for function
-  environManager.discardCurrentEnviron();
+  // Teardown any environments created by the function.
+  environManager.discardEnvironsTill(funcObj->getClosure());
+  // Restore caller's environment.
+  environManager.setCurrEnv(environToRestore);
 
   // return result or LoxObject(nullptr);
   if (result.has_value()) return result.value();
@@ -219,7 +247,17 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
 }
 
 auto Evaluator::evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject {
-  return new FuncObj(expr, "LoxAnonFuncDoNotUseThisNameAADWAED");
+  // The current Environment becomes the closure for the function.
+  auto closure = environManager.getCurrEnv();
+  // We also create a new environment because we don't want any redefinitions of
+  // variables that are later in the program lexical order to be visible to this
+  // function (in case it's stored and passed around). This environment creation
+  // isn't paired with a destruction in this function. The environment will be
+  // discarded when exiting wrapping scope this function is defined in (and the
+  // FuncObj goes out of scope.)
+  environManager.createNewEnviron();
+  return std::make_shared<FuncObj>(expr, "LoxAnonFuncDoNotUseThisNameAADWAED",
+                                   std::move(closure));
 }
 
 auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
@@ -259,20 +297,41 @@ auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
 //==============================//
 auto Evaluator::evaluateExprStmt(const ExprStmtPtr& stmt)
     -> std::optional<LoxObject> {
-  return evaluateExpr(stmt->expression);
+#ifdef EVAL_DEBUG
+  ErrorsAndDebug::debugPrint("evaluateExprStmt called.");
+#endif  // EVAL_DEBUG
+
+  LoxObject result = evaluateExpr(stmt->expression);
+
+#ifdef EVAL_DEBUG
+  ErrorsAndDebug::debugPrint("evaluateExprStmt: expression evaluation result: "
+                             + getObjectString(result));
+#endif  // EVAL_DEBUG
+  return std::nullopt;
 }
 
 auto Evaluator::evaluatePrintStmt(const PrintStmtPtr& stmt)
     -> std::optional<LoxObject> {
-  std::cout << getObjectString(evaluateExpr(stmt->expression)) << std::endl;
+#ifdef EVAL_DEBUG
+  ErrorsAndDebug::debugPrint("evaluatePrintStmt called.");
+#endif  // EVAL_DEBUG
+
+  LoxObject objectToPrint = evaluateExpr(stmt->expression);
+  std::cout << ">" << getObjectString(objectToPrint) << std::endl;
+
+#ifdef EVAL_DEBUG
+  ErrorsAndDebug::debugPrint("evaluatePrintStmt should have printed."
+                             + getObjectString(objectToPrint));
+#endif  // EVAL_DEBUG
   return std::nullopt;
 }
 
 auto Evaluator::evaluateBlockStmt(const BlockStmtPtr& stmt)
     -> std::optional<LoxObject> {
+  auto currEnviron = environManager.getCurrEnv();
   environManager.createNewEnviron();
   std::optional<LoxObject> result = evaluateStmts(stmt->statements);
-  environManager.discardCurrentEnviron();
+  environManager.discardEnvironsTill(currEnviron);
   return result;
 }
 
@@ -322,10 +381,20 @@ auto Evaluator::evaluateForStmt(const ForStmtPtr& stmt)
 
 auto Evaluator::evaluateFuncStmt(const FuncStmtPtr& stmt)
     -> std::optional<LoxObject> {
+  // The current Environment becomes the closure for the function.
+  std::shared_ptr<Environment> closure = environManager.getCurrEnv();
   // Create a FuncObj for the function, and hand it off to environment to store
   environManager.define(
       stmt->funcName,
-      std::make_unique<FuncObj>(stmt->funcExpr, stmt->funcName.getLexeme()));
+      std::make_shared<FuncObj>(stmt->funcExpr, stmt->funcName.getLexeme(),
+                                std::move(closure)));
+  // We also create a new environment because we don't want any redefinitions of
+  // variables that are later in the program lexical order to be visible to this
+  // function (in case it's stored and passed around). This environment creation
+  // isn't paired with a destruction in this function. The environment will be
+  // discarded when exiting wrapping scope this function is defined in (and the
+  // FuncObj goes out of scope.)
+  environManager.createNewEnviron();
   return std::nullopt;
 }
 
@@ -369,15 +438,17 @@ auto Evaluator::evaluateStmt(const AST::StmtPtrVariant& stmt)
 auto Evaluator::evaluateStmts(const std::vector<AST::StmtPtrVariant>& stmts)
     -> std::optional<LoxObject> {
   std::optional<LoxObject> result = std::nullopt;
-  try {
-    for (const AST::StmtPtrVariant& stmt : stmts) {
+  for (const AST::StmtPtrVariant& stmt : stmts) {
+    try {
       result = evaluateStmt(stmt);
       if (result.has_value()) break;
-    }
-  } catch (const ErrorsAndDebug::RuntimeError& e) {
-    if (EXPECT_FALSE(++numRunTimeErr > MAX_RUNTIME_ERR)) {
-      std::cerr << "Too many errors occurred. Exiting evaluation." << std::endl;
-      throw e;
+    } catch (const ErrorsAndDebug::RuntimeError& e) {
+      ErrorsAndDebug::debugPrint("Caught unhandled exception.");
+      if (EXPECT_FALSE(++numRunTimeErr > MAX_RUNTIME_ERR)) {
+        std::cerr << "Too many errors occurred. Exiting evaluation."
+                  << std::endl;
+        throw e;
+      }
     }
   }
   return result;
@@ -385,7 +456,8 @@ auto Evaluator::evaluateStmts(const std::vector<AST::StmtPtrVariant>& stmts)
 
 class clockBuiltin : public BuiltinFunc {
  public:
-  clockBuiltin() : BuiltinFunc("clock") {}
+  explicit clockBuiltin(Environment::EnvironmentPtr closure)
+      : BuiltinFunc("clock", std::move(closure)) {}
   auto arity() -> size_t override { return 0; }
   auto run() -> LoxObject override {
     return static_cast<double>(
@@ -398,8 +470,10 @@ class clockBuiltin : public BuiltinFunc {
 
 Evaluator::Evaluator(ErrorReporter& eReporter)
     : eReporter(eReporter), environManager(eReporter) {
-  environManager.define(Types::Token(TokenType::FUN, "clock"),
-                        std::make_unique<clockBuiltin>());
+  environManager.define(
+      Types::Token(TokenType::FUN, "clock"),
+      static_cast<BuiltinFuncShrdPtr>(
+          std::make_shared<clockBuiltin>(environManager.getCurrEnv())));
 }
 
 }  // namespace cpplox::Evaluator

@@ -43,7 +43,7 @@ TEST(ScannerTests, all_valid_tokens) {
                                             TokenType::AND,
                                             TokenType::CLASS,
                                             TokenType::ELSE,
-                                            TokenType::FALSE,
+                                            TokenType::LOX_FALSE,
                                             TokenType::FUN,
                                             TokenType::FOR,
                                             TokenType::IF,
@@ -53,7 +53,7 @@ TEST(ScannerTests, all_valid_tokens) {
                                             TokenType::RETURN,
                                             TokenType::SUPER,
                                             TokenType::THIS,
-                                            TokenType::TRUE,
+                                            TokenType::LOX_TRUE,
                                             TokenType::VAR,
                                             TokenType::WHILE,
                                             TokenType::LOX_EOF};
@@ -66,7 +66,7 @@ TEST(ScannerTests, all_valid_tokens) {
 
 TEST(ScannerTests, empty_buffer) {
   cpplox::ErrorsAndDebug::ErrorReporter eReporter;
-  std::string source = "";
+  std::string source;
   cpplox::Scanner scanner(source, eReporter);
   std::vector<Types::Token> tokensVec = scanner.tokenize();
   ASSERT_EQ(eReporter.getStatus(), ErrorsAndDebug::LoxStatus::OK);

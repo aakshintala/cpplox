@@ -45,7 +45,7 @@ enum class TokenType {
   AND,
   CLASS,
   ELSE,
-  FALSE,
+  LOX_FALSE,
   FUN,
   FOR,
   IF,
@@ -55,7 +55,7 @@ enum class TokenType {
   RETURN,
   SUPER,
   THIS,
-  TRUE,
+  LOX_TRUE,
   VAR,
   WHILE,
 

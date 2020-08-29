@@ -103,9 +103,9 @@ auto parse(const std::vector<Token>& tokenVec)
 
 #ifdef PARSER_DEBUG
   if (!statements.empty()) {
-    AST::PrettyPrinter printer(statements);
     debugPrint("Here's the AST that was generated:");
-    for (const auto& str : printer.toString()) debugPrint(str);
+    for (const auto& str : AST::PrettyPrinter::toString(statements))
+      debugPrint(str);
   } else {
     debugPrint("Parser returned no valid statements.");
   }

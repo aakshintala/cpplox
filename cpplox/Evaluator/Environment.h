@@ -1,9 +1,9 @@
 #ifndef CPPLOX_EVALUATOR_ENVIRONMENT__H
 #define CPPLOX_EVALUATOR_ENVIRONMENT__H
-#include <exception>
 #pragma once
 
 #include <cstddef>
+#include <exception>
 #include <list>
 #include <map>
 #include <memory>
@@ -17,51 +17,47 @@
 namespace cpplox::Evaluator {
 using ErrorsAndDebug::ErrorReporter;
 
+// Do not use the Environment directly. Use the EnvironmentManager class below
+// instead to manage it.
+class Environment : public Types::Uncopyable,
+                    std::enable_shared_from_this<Environment> {
+ public:
+  using EnvironmentPtr = std::shared_ptr<Environment>;
+
+  explicit Environment(EnvironmentPtr parentEnviron);
+
+  auto assign(size_t hashedVarName, LoxObject object) -> bool;
+  void define(size_t hashedVarName, LoxObject object);
+  void define(size_t hashedVarName, FuncShrdPtr function);
+  void define(size_t hashedVarName, BuiltinFuncShrdPtr function);
+  auto get(size_t hashedVarName) -> LoxObject;
+  auto getParentEnv() -> EnvironmentPtr;
+  auto isGlobal() -> bool;
+
+ private:
+  std::map<size_t, LoxObject> objects;
+  EnvironmentPtr parentEnviron = nullptr;
+};
+
 class EnvironmentManager : public Types::Uncopyable {
  public:
   explicit EnvironmentManager(ErrorReporter& eReporter);
 
-  void createNewEnviron();
-  void discardCurrentEnviron();
-  void define(const Types::Token& varToken, LoxObject object);
-  void define(const Types::Token& varToken, FuncUniqPtr function);
-  void define(const Types::Token& varToken, BuiltinFuncUniqPtr function);
   void assign(const Types::Token& varToken, LoxObject object);
+  void createNewEnviron(const std::string& caller = __builtin_FUNCTION());
+  void discardEnvironsTill(const Environment::EnvironmentPtr& environToRestore,
+                           const std::string& caller = __builtin_FUNCTION());
+  void define(const Types::Token& varToken, LoxObject object);
+  void define(const Types::Token& varToken, FuncShrdPtr function);
+  void define(const Types::Token& varToken, BuiltinFuncShrdPtr function);
   auto get(const Types::Token& varToken) -> LoxObject;
+  auto getCurrEnv() -> Environment::EnvironmentPtr;
+  void setCurrEnv(Environment::EnvironmentPtr newCurr,
+                  const std::string& caller = __builtin_FUNCTION());
 
  private:
-  class Environment;
-  using EnvironmentPtr = std::unique_ptr<Environment>;
-
-  class UndefinedVarAccess : public std::exception {};
-  class UninitializedVarAccess : public std::exception {};
-
-  class Environment : public Types::Uncopyable {
-   public:
-    // For all environs other than Global, use this constructor.
-    explicit Environment(EnvironmentPtr parentEnviron);
-
-    auto assign(size_t hashedVarName, LoxObject object) -> bool;
-    void define(size_t hashedVarName, LoxObject object);
-    void define(size_t hashedVarName, FuncUniqPtr function);
-    void define(size_t hashedVarName, BuiltinFuncUniqPtr function);
-    auto get(size_t hashedVarName) -> LoxObject;
-    auto isGlobal() -> bool;
-    auto releaseParentEnv() -> EnvironmentPtr;
-
-   private:
-    std::map<size_t, LoxObject> objects;
-    EnvironmentPtr parentEnviron = nullptr;
-
-    // The environment is repsonsible for the lifetimes of functions.
-    // Do not access functions through this interface.
-    // This is purely a construct for single ownership.
-    std::list<std::unique_ptr<FuncObj>> funcOwnerVec;
-    std::list<std::unique_ptr<BuiltinFunc>> builtinfuncOwnerVec;
-  };
-
   ErrorReporter& eReporter;
-  EnvironmentPtr currEnviron;
+  Environment::EnvironmentPtr currEnviron;
   std::hash<std::string> hasher;
 };
 

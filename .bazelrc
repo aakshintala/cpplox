@@ -2,11 +2,15 @@
 build --cxxopt='-std=c++17'
 
 # enable debugPrint or not
-build --cxxopt='-D_CPPLOX_DEBUG_'
+#build --cxxopt='-D_CPPLOX_DEBUG_'
 
+# debug build
 #build --cxxopt='-g'
-build -c opt
+#build -c dbg
+
+# release build
 build --cxxopt='-O3'
+build -c opt
 
 # Enable LTO
-# build --cxxopt='-flto=thin' --linkopt='-flto=thin'
+ build --cxxopt='-flto=thin' --linkopt='-flto=thin'

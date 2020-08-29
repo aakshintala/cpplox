@@ -7,13 +7,20 @@
 
 namespace cpplox::Evaluator {
 
-FuncObj::FuncObj(const AST::FuncExprPtr& declaration, std::string funcName)
-    : declaration(declaration), funcName(std::move(funcName)) {}
+FuncObj::FuncObj(const AST::FuncExprPtr& declaration, std::string funcName,
+                 std::shared_ptr<Environment> closure)
+    : declaration(declaration),
+      funcName(std::move(funcName)),
+      closure(std::move(closure)) {}
 
 auto FuncObj::arity() const -> size_t { return declaration->parameters.size(); }
 
 auto FuncObj::getParams() const -> const std::vector<Types::Token>& {
   return declaration->parameters;
+}
+
+auto FuncObj::getClosure() const -> std::shared_ptr<Environment> {
+  return closure;
 }
 
 auto FuncObj::getFnBodyStmts() const
@@ -23,8 +30,9 @@ auto FuncObj::getFnBodyStmts() const
 
 auto FuncObj::getFnName() const -> const std::string& { return funcName; }
 
-BuiltinFunc::BuiltinFunc(std::string funcName)
-    : funcName(std::move(funcName)) {}
+BuiltinFunc::BuiltinFunc(std::string funcName,
+                         std::shared_ptr<Environment> closure)
+    : funcName(std::move(funcName)), closure(std::move(closure)) {}
 
 auto areEqual(const LoxObject& left, const LoxObject& right) -> bool {
   if (left.index() == right.index()) {
@@ -39,12 +47,12 @@ auto areEqual(const LoxObject& left, const LoxObject& right) -> bool {
         // The case where one is null and the other isn't is handled by the
         // outer condition;
         return true;
-      case 4:  // FuncObj*
-        return std::get<FuncObj*>(left)->getFnName()
-               == std::get<FuncObj*>(right)->getFnName();
-      case 5:  // BuiltinFunc*
-        return std::get<BuiltinFunc*>(left)->getFnName()
-               == std::get<BuiltinFunc*>(right)->getFnName();
+      case 4:  // FuncShrdPtr
+        return std::get<FuncShrdPtr>(left)->getFnName()
+               == std::get<FuncShrdPtr>(right)->getFnName();
+      case 5:  // BuiltinFuncShrdPtr
+        return std::get<BuiltinFuncShrdPtr>(left)->getFnName()
+               == std::get<BuiltinFuncShrdPtr>(right)->getFnName();
       default:
         static_assert(
             std::variant_size_v<LoxObject> == 6,
@@ -72,10 +80,10 @@ auto getObjectString(const LoxObject& object) -> std::string {
       return std::get<2>(object) == true ? "true" : "false";
     case 3:  // nullptr
       return "nil";
-    case 4:  // FuncObj*
-      return std::get<FuncObj*>(object)->getFnName();
-    case 5:  // BuiltinFunc*
-      return std::get<BuiltinFunc*>(object)->getFnName();
+    case 4:  // FuncShrdPtr
+      return std::get<FuncShrdPtr>(object)->getFnName();
+    case 5:  // BuiltinFuncShrdPtr
+      return std::get<BuiltinFuncShrdPtr>(object)->getFnName();
     default:
       static_assert(std::variant_size_v<LoxObject> == 6,
                     "Looks like you forgot to update the cases in "
@@ -87,10 +95,10 @@ auto getObjectString(const LoxObject& object) -> std::string {
 auto isTrue(const LoxObject& object) -> bool {
   if (std::holds_alternative<std::nullptr_t>(object)) return false;
   if (std::holds_alternative<bool>(object)) return std::get<bool>(object);
-  if (std::holds_alternative<FuncObj*>(object))
-    return (std::get<FuncObj*>(object) == nullptr);
-  if (std::holds_alternative<BuiltinFunc*>(object))
-    return (std::get<BuiltinFunc*>(object) == nullptr);
+  if (std::holds_alternative<FuncShrdPtr>(object))
+    return (std::get<FuncShrdPtr>(object) == nullptr);
+  if (std::holds_alternative<BuiltinFuncShrdPtr>(object))
+    return (std::get<BuiltinFuncShrdPtr>(object) == nullptr);
   return true;  // for all else we go to true
 }
 

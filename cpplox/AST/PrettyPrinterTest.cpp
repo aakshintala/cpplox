@@ -31,8 +31,7 @@ TEST(PrettyPrinterTest, simple_expression_stmt) {
     )
   });
   // clang-format on
-  PrettyPrinter printer(stmtVec);
-  auto strs = printer.toString();
+  auto strs = PrettyPrinter::toString(stmtVec);
   EXPECT_EQ(1, strs.size());
   EXPECT_EQ("( (* (- 123) (group 45.67)));", strs[0]);
 }
