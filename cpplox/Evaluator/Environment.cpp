@@ -6,7 +6,6 @@
 #include <utility>
 #include <variant>
 
-#include "Objects.h"
 #include "cpplox/ErrorsAndDebug/DebugPrint.h"
 #include "cpplox/ErrorsAndDebug/RuntimeError.h"
 

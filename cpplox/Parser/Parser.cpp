@@ -180,12 +180,12 @@ void RDParser::throwOnErrorProductions() {
                          &RDParser::multiplication);
 }
 
-// ---------------- Grammar Production Rules
-// ----------------------------------- This is a recursive descent parser. The
-// grammar for Lox is declared above each of the functions. The functions are
-// sorted based on lowest to highest precedence; program     → declaration*
-// LOX_EOF;
+// ---------------- Grammar Production Rules -----------------------------------
+// This is a recursive descent parser. The grammar for Lox is declared above
+// each of the functions. The functions are sorted based on lowest to highest
+// precedence;
 
+// program     → declaration* LOX_EOF;
 void RDParser::program() {
   try {
     while (!isAtEnd()) {
@@ -540,9 +540,11 @@ auto RDParser::arguments() -> std::vector<ExprPtrVariant> {
 // primary    → NUMBER | STRING | "false" | "true" | "nil";
 // primary    →  "(" expression ")" | IDENTIFIER;
 // primary     → "fun" funBody;
-//  Error Productions: primary    → ("!=" | "==") equality primary    →
-// (">" | ">=" | "<" | "<=") comparison primary    → ("+")addition primary →
-// ("/" | "*") multiplication;
+//  Error Productions:
+// primary    → ("!=" | "==") equality
+// primary    → (">" | ">=" | "<" | "<=") comparison
+// primary    → ("+")addition
+// primary → ("/" | "*") multiplication;
 auto RDParser::primary() -> ExprPtrVariant {
   if (match(TokenType::LOX_FALSE)) return consumeOneLiteral("false");
   if (match(TokenType::LOX_TRUE)) return consumeOneLiteral("true");
