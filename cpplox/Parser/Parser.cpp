@@ -96,12 +96,6 @@ auto RDParser::getTokenAndAdvance() -> Token {
   return token;
 }
 
-auto RDParser::getVarNameOrThrowError(const ExprPtrVariant& expr) -> Token {
-  if (std::holds_alternative<AST::VariableExprPtr>(expr))
-    return std::get<AST::VariableExprPtr>(expr)->varName;
-  throw error("Invalid assignment target");
-}
-
 auto RDParser::isAtEnd() const -> bool {
   return peek().getType() == TokenType::LOX_EOF;
 }
@@ -198,8 +192,7 @@ void RDParser::program() {
     eReporter.setError(peek().getLine(), errorMessage);
   }
 }
-
-// declaration → varDecl | funcDecl | statement;
+// declaration → varDecl | funcDecl | classDecl | statement;
 auto RDParser::declaration() -> std::optional<StmtPtrVariant> {
   try {
     if (match(TokenType::VAR)) {
@@ -210,6 +203,11 @@ auto RDParser::declaration() -> std::optional<StmtPtrVariant> {
     if (match(TokenType::FUN) && matchNext(TokenType::IDENTIFIER)) {
       advance();
       return funcDecl("function");
+    }
+
+    if (match(TokenType::CLASS)) {
+      advance();
+      return classDecl();
     }
 
     return statement();
@@ -274,7 +272,7 @@ auto RDParser::funcBody(const std::string& kind) -> ExprPtrVariant {
   return AST::createFuncEPV(std::move(params), std::move(fnBody));
 }
 
-// funcDecl    → "fun" IDENTIFIER funcBody;
+// funcDecl    → IDENTIFIER funcBody;
 auto RDParser::funcDecl(const std::string& kind) -> StmtPtrVariant {
   if (match(TokenType::IDENTIFIER)) {
     // Get the name outside or GCC produces invalid code.
@@ -283,6 +281,21 @@ auto RDParser::funcDecl(const std::string& kind) -> StmtPtrVariant {
                               std::get<AST::FuncExprPtr>(funcBody(kind)));
   }
   throw error("Expected a " + kind + " name after the fun keyword");
+}
+
+// classDecl   → IDENTIFIER "{" funcDecl* "}" ;
+auto RDParser::classDecl() -> StmtPtrVariant {
+  if (match(TokenType::IDENTIFIER)) {
+    Token className = getTokenAndAdvance();
+    consumeOrError(TokenType::LEFT_BRACE, "Expecte '{' after class name.");
+    std::vector<StmtPtrVariant> methods;
+    while (!match(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+      methods.push_back(funcDecl("method"));
+    }
+    consumeOrError(TokenType::RIGHT_BRACE, "Expecte '}' after class body.");
+    return AST::createClassSPV(std::move(className), std::move(methods));
+  }
+  throw error("Expected a name after the class keyword");
 }
 
 // statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
@@ -418,14 +431,27 @@ auto RDParser::comma() -> ExprPtrVariant {
                                &RDParser::assignment);
 }
 
-// assignment  → IDENTIFIER "=" assignment | condititional;
+// assignment  → (call ".")? IDENTIFIER "=" assignment | condititional;
 auto RDParser::assignment() -> ExprPtrVariant {
   ExprPtrVariant expr = conditional();
+
   if (match(TokenType::EQUAL)) {
     advance();
-    Token varName = getVarNameOrThrowError(expr);
-    return AST::createAssignmentEPV(varName, assignment());
+    if (std::holds_alternative<AST::VariableExprPtr>(expr)) {
+      Token varName = std::get<AST::VariableExprPtr>(expr)->varName;
+      return AST::createAssignmentEPV(varName, assignment());
+    }
+    if (std::holds_alternative<AST::GetExprPtr>(expr)) {
+      // Discard the last GetExpr. The property won't be found in the object as
+      // we haven't set it yet (this operation). Instead replace it with a
+      // SetExpr
+      auto& getExpr = std::get<AST::GetExprPtr>(expr);
+      return AST::createSetEPV(std::move(getExpr->expr),
+                               std::move(getExpr->name), assignment());
+    }
+    throw error("Invalid assignment target");
   }
+
   return expr;
 }
 
@@ -504,7 +530,7 @@ auto RDParser::postfix() -> ExprPtrVariant {
   return consumePostfixExpr(call());
 }
 
-// call        → primary ( "(" arguments? ")" )*;
+// call        → primary ( "(" arguments? ")" | "." IDENTIFIER )*;
 auto RDParser::call() -> ExprPtrVariant {
   auto expr = primary();
   while (true) {
@@ -516,6 +542,12 @@ auto RDParser::call() -> ExprPtrVariant {
         throw error("Expected ')' after function invocation.");
       expr = createCallEPV(std::move(expr), getTokenAndAdvance(),
                            std::move(args));
+    } else if (match(TokenType::DOT)) {
+      advance();
+      Token name = match(TokenType::IDENTIFIER)
+                       ? getTokenAndAdvance()
+                       : throw error("Expected a name after '.'.");
+      expr = createGetEPV(std::move(expr), std::move(name));
     } else {
       break;
     }
@@ -552,6 +584,7 @@ auto RDParser::primary() -> ExprPtrVariant {
   if (match(TokenType::NUMBER)) return consumeOneLiteral();
   if (match(TokenType::STRING)) return consumeOneLiteral();
   if (match(TokenType::LEFT_PAREN)) return consumeGroupingExpr();
+  if (match(TokenType::THIS)) return AST::createThisEPV(getTokenAndAdvance());
   if (match(TokenType::IDENTIFIER)) return consumeVarExpr();
   if (match(TokenType::FUN)) return funcBody("Anon-Function");
 

@@ -32,6 +32,9 @@ struct AssignmentExpr;
 struct LogicalExpr;
 struct CallExpr;
 struct FuncExpr;
+struct GetExpr;
+struct SetExpr;
+struct ThisExpr;
 
 // Unique_pointer sugar for Exprs.
 using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
@@ -45,6 +48,18 @@ using AssignmentExprPtr = std::unique_ptr<AssignmentExpr>;
 using LogicalExprPtr = std::unique_ptr<LogicalExpr>;
 using CallExprPtr = std::unique_ptr<CallExpr>;
 using FuncExprPtr = std::unique_ptr<FuncExpr>;
+using GetExprPtr = std::unique_ptr<GetExpr>;
+using SetExprPtr = std::unique_ptr<SetExpr>;
+using ThisExprPtr = std::unique_ptr<ThisExpr>;
+
+// The variant that we will use to pass around pointers to each of these
+// expression types. I'm exploring this so we don't have to rely on vTables
+// for dynamic dispatch on visitor functions.
+using ExprPtrVariant
+    = std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr,
+                   ConditionalExprPtr, PostfixExprPtr, VariableExprPtr,
+                   AssignmentExprPtr, LogicalExprPtr, CallExprPtr, FuncExprPtr,
+                   GetExprPtr, SetExprPtr, ThisExprPtr>;
 
 // Forward Declaration of Statement Node types;
 struct ExprStmt;
@@ -56,6 +71,7 @@ struct WhileStmt;
 struct ForStmt;
 struct FuncStmt;
 struct RetStmt;
+struct ClassStmt;
 
 // Unique pointer sugar for Stmts
 using ExprStmtPtr = std::unique_ptr<ExprStmt>;
@@ -67,20 +83,14 @@ using WhileStmtPtr = std::unique_ptr<WhileStmt>;
 using ForStmtPtr = std::unique_ptr<ForStmt>;
 using FuncStmtPtr = std::unique_ptr<FuncStmt>;
 using RetStmtPtr = std::unique_ptr<RetStmt>;
-
-// The variant that we will use to pass around pointers to each of these
-// expression types. I'm exploring this so we don't have to rely on vTables
-// for dynamic dispatch on visitor functions.
-using ExprPtrVariant
-    = std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr,
-                   ConditionalExprPtr, PostfixExprPtr, VariableExprPtr,
-                   AssignmentExprPtr, LogicalExprPtr, CallExprPtr, FuncExprPtr>;
+using ClassStmtPtr = std::unique_ptr<ClassStmt>;
 
 // We use this variant to pass around pointers to each of these Stmt types,
 // without having to resort to virtual functions and dynamic dispatch
-using StmtPtrVariant = std::variant<ExprStmtPtr, PrintStmtPtr, BlockStmtPtr,
-                                    VarStmtPtr, IfStmtPtr, WhileStmtPtr,
-                                    ForStmtPtr, FuncStmtPtr, RetStmtPtr>;
+using StmtPtrVariant
+    = std::variant<ExprStmtPtr, PrintStmtPtr, BlockStmtPtr, VarStmtPtr,
+                   IfStmtPtr, WhileStmtPtr, ForStmtPtr, FuncStmtPtr, RetStmtPtr,
+                   ClassStmtPtr>;
 
 // Helper functions to create ExprPtrVariants for each Expr type
 auto createBinaryEPV(ExprPtrVariant left, Token op, ExprPtrVariant right)
@@ -99,6 +109,10 @@ auto createCallEPV(ExprPtrVariant callee, Token paren,
                    std::vector<ExprPtrVariant> arguments) -> ExprPtrVariant;
 auto createFuncEPV(std::vector<Token> params,
                    std::vector<StmtPtrVariant> fnBody) -> ExprPtrVariant;
+auto createGetEPV(ExprPtrVariant expr, Token name) -> ExprPtrVariant;
+auto createSetEPV(ExprPtrVariant expr, Token name, ExprPtrVariant value)
+    -> ExprPtrVariant;
+auto createThisEPV(Token keyword) -> ExprPtrVariant;
 
 // Helper functions to create StmtPtrVariants for each Stmt type
 auto createExprSPV(ExprPtrVariant expr) -> StmtPtrVariant;
@@ -116,6 +130,8 @@ auto createForSPV(std::optional<StmtPtrVariant> initializer,
                   StmtPtrVariant loopBody) -> StmtPtrVariant;
 auto createFuncSPV(Token fName, FuncExprPtr funcExpr) -> StmtPtrVariant;
 auto createRetSPV(Token ret, std::optional<ExprPtrVariant> value)
+    -> StmtPtrVariant;
+auto createClassSPV(Token className, std::vector<StmtPtrVariant> methods)
     -> StmtPtrVariant;
 
 // Expression AST Types:
@@ -189,6 +205,24 @@ struct FuncExpr final : public Uncopyable {
   FuncExpr(std::vector<Token> parameters, std::vector<StmtPtrVariant> body);
 };
 
+struct GetExpr final : public Uncopyable {
+  ExprPtrVariant expr;
+  Token name;
+  GetExpr(ExprPtrVariant expr, Token name);
+};
+
+struct SetExpr final : public Uncopyable {
+  ExprPtrVariant expr;
+  Token name;
+  ExprPtrVariant value;
+  SetExpr(ExprPtrVariant expr, Token name, ExprPtrVariant value);
+};
+
+struct ThisExpr final : public Uncopyable {
+  Token keyword;
+  explicit ThisExpr(Token keyword);
+};
+
 // Statment AST types;
 struct ExprStmt final : public Uncopyable {
   ExprPtrVariant expression;
@@ -246,6 +280,12 @@ struct RetStmt : public Uncopyable {
   Token ret;
   std::optional<ExprPtrVariant> value;
   RetStmt(Token ret, std::optional<ExprPtrVariant> value);
+};
+
+struct ClassStmt : public Uncopyable {
+  Token className;
+  std::vector<StmtPtrVariant> methods;
+  ClassStmt(Token className, std::vector<StmtPtrVariant> methods);
 };
 
 }  // namespace cpplox::AST

@@ -41,16 +41,6 @@ void Environment::define(size_t hashedVarName, LoxObject object) {
   objects.insert_or_assign(hashedVarName, object);
 }
 
-void Environment::define(size_t hashedVarName, FuncShrdPtr function) {
-  // Insert a LoxObject with a shared_ptr to the FuncObj into the object map;
-  objects.insert_or_assign(hashedVarName, LoxObject(function));
-}
-
-void Environment::define(size_t hashedVarName, BuiltinFuncShrdPtr function) {
-  // Store a LoxObject with the shared_ptr to the BuiltinFunc;
-  objects.insert_or_assign(hashedVarName, LoxObject(function));
-}
-
 auto Environment::get(size_t hashedVarName) -> LoxObject {
   auto iter = objects.find(hashedVarName);
   if (EXPECT_TRUE(iter != objects.end())) {
@@ -113,19 +103,13 @@ void EnvironmentManager::discardEnvironsTill(
   }
 }
 
+void EnvironmentManager::define(const std::string& tokenStr, LoxObject object) {
+  currEnviron->define(hasher(tokenStr), std::move(object));
+}
+
 void EnvironmentManager::define(const Types::Token& varToken,
                                 LoxObject object) {
   currEnviron->define(hasher(varToken.getLexeme()), std::move(object));
-}
-
-void EnvironmentManager::define(const Types::Token& varToken,
-                                FuncShrdPtr function) {
-  currEnviron->define(hasher(varToken.getLexeme()), std::move(function));
-}
-
-void EnvironmentManager::define(const Types::Token& varToken,
-                                BuiltinFuncShrdPtr function) {
-  currEnviron->define(hasher(varToken.getLexeme()), std::move(function));
 }
 
 void EnvironmentManager::assign(const Types::Token& varToken,

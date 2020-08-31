@@ -3,8 +3,8 @@
 #pragma once
 
 #include <exception>
-#include <iterator>
 #include <functional>
+#include <iterator>
 #include <vector>
 
 #include "cpplox/AST/NodeTypes.h"
@@ -17,9 +17,10 @@
 // clang-format off
 // Grammar production rules:
 // program     → declaration* LOX_EOF;
-// declaration → varDecl | funcDecl | statement;
+// declaration → varDecl | funcDecl | classDecl | statement;
 // varDecl     → "var" IDENTIFIER ("=" expression)? ";" ;
-// funcDecl    → "fun" IDENTIFIER funcBody;
+// classDecl   → "class" IDENTIFIER "{" funcDecl* "}" ;
+// funcDecl    → IDENTIFIER funcBody;
 // funcBody     → "(" parameters? ")" "{" declaration "}";
 // statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
 // statement   → forStmt | returnStmt;
@@ -35,7 +36,7 @@
 // expression  → comma;
 // comma       → assignment ("," assignment)*;
 // arguments   → assignment  ( "," assignment )* ;
-// assignment  → IDENTIFIER "=" assignment | condititional;
+// assignment  → (call ".")? IDENTIFIER "=" assignment | condititional;
 // conditional → logical_or ("?" expression ":" conditional)?;
 // logical_or  → logical_and ("or" logical_and)*;
 // logical_and → equality ("and" equality)*;
@@ -45,7 +46,7 @@
 // multipli... → unary(("/" | "*") unary) *;
 // unary       → ("!" | "-" | "--" | "++") unary | postfix;
 // postfix     → call ("++" | "--")*;
-// call        → primary ( "(" arguments? ")" )*;
+// call        → primary ( "(" arguments? ")" | "." IDENTIFIER )*;
 // primary     → NUMBER | STRING | "false" | "true" | "nil";
 // primary     → "(" expression ")";
 // primary     → IDENTIFIER;
@@ -80,8 +81,9 @@ class RDParser {
   void program();
   auto declaration() -> std::optional<StmtPtrVariant>;
   auto varDecl() -> StmtPtrVariant;
-  auto funcBody(const std::string& kind) -> ExprPtrVariant;
+  auto classDecl() -> StmtPtrVariant;
   auto funcDecl(const std::string& kind) -> StmtPtrVariant;
+  auto funcBody(const std::string& kind) -> ExprPtrVariant;
   auto parameters() -> std::vector<Types::Token>;
   auto statement() -> StmtPtrVariant;
   auto exprStmt() -> StmtPtrVariant;
@@ -126,7 +128,6 @@ class RDParser {
   auto error(const std::string& eMessage) -> RDParseError;
   [[nodiscard]] auto getCurrentTokenType() const -> Types::TokenType;
   auto getTokenAndAdvance() -> Types::Token;
-  auto getVarNameOrThrowError(const ExprPtrVariant& expr) -> Types::Token;
   [[nodiscard]] auto isAtEnd() const -> bool;
   [[nodiscard]] auto match(
       const std::initializer_list<Types::TokenType>& types) const -> bool;
@@ -142,8 +143,8 @@ class RDParser {
   // The data the parser operates on.
   const std::vector<Types::Token>& tokens;
   std::vector<cpplox::Types::Token>::const_iterator currentIter;
-  //std::__wrap_iter<std::vector<cpplox::Types::Token>::const_pointer>
-      //currentIter;
+  // std::__wrap_iter<std::vector<cpplox::Types::Token>::const_pointer>
+  // currentIter;
   ErrorsAndDebug::ErrorReporter& eReporter;
   std::vector<StmtPtrVariant> statements;
 

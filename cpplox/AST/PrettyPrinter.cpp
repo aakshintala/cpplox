@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "NodeTypes.h"
 #include "cpplox/Types/Literal.h"
 
 namespace cpplox::AST {
@@ -86,6 +87,65 @@ auto printFuncExpr(const FuncExprPtr& expr) -> std::string {
   funcStr += "\n}";
   return funcStr;
 }
+
+auto printGetExpr(const GetExprPtr& expr) -> std::string {
+  std::string str = PrettyPrinter::toString(expr->expr);
+  str += " .( get " + expr->name.getLexeme() + " )";
+  return str;
+}
+
+auto printSetExpr(const SetExprPtr& expr) -> std::string {
+  std::string str = PrettyPrinter::toString(expr->expr);
+  std::string val = PrettyPrinter::toString(expr->value);
+  str += " .( set " + expr->name.getLexeme() + " ) = " + val;
+  return str;
+}
+
+auto printThisExpr(const ThisExprPtr& expr) -> std::string {
+  return "( this )";
+}
+
+}  // namespace
+
+auto PrettyPrinter::toString(const ExprPtrVariant& expression) -> std::string {
+  switch (expression.index()) {
+    case 0:  // BinaryExprPtr
+      return printBinaryExpr(std::get<0>(expression));
+    case 1:  // GroupingExprPtr
+      return printGroupingExpr(std::get<1>(expression));
+    case 2:  // LiteralExprPtr
+      return printLiteralExpr(std::get<2>(expression));
+    case 3:  // UnaryExprPtr
+      return printUnaryExpr(std::get<3>(expression));
+    case 4:  // ConditionalExprPtr
+      return printConditionalExpr(std::get<4>(expression));
+    case 5:  // PostfixExprPtr
+      return printPostfixExpr(std::get<5>(expression));
+    case 6:  // VariableExprPtr
+      return printVariableExpr(std::get<6>(expression));
+    case 7:  // AssignmentExprPtr
+      return printAssignmentExpr(std::get<7>(expression));
+    case 8:  // LogicalExprPtr
+      return printLogicalExpr(std::get<8>(expression));
+    case 9:  // CallExprPtr
+      return printCallExpr(std::get<9>(expression));
+    case 10:  // FuncExprPtr
+      return printFuncExpr(std::get<10>(expression));
+    case 11:  // GetExprPtr
+      return printGetExpr(std::get<11>(expression));
+    case 12:  // SetExprPtr
+      return printSetExpr(std::get<12>(expression));
+    case 13:  // ThisExprPtr
+      return printThisExpr(std::get<13>(expression));
+    default:
+      static_assert(std::variant_size_v<ExprPtrVariant> == 14,
+                    "Looks like you forgot to update the cases in "
+                    "PrettyPrinter::toString(const ExptrVariant&)!");
+      return "";
+  }
+}
+
+namespace {
 
 auto printExprStmt(const ExprStmtPtr& stmt) -> std::string {
   return parenthesize("", stmt->expression) + ";";
@@ -187,43 +247,18 @@ auto printRetStmt(const RetStmtPtr& stmt) -> std::string {
   return "( return" + value + ");";
 }
 
-}  // namespace
-
-//=========================//
-// Publicly exposed printing functions //
-//=========================//
-
-auto PrettyPrinter::toString(const ExprPtrVariant& expression) -> std::string {
-  switch (expression.index()) {
-    case 0:  // BinaryExprPtr
-      return printBinaryExpr(std::get<0>(expression));
-    case 1:  // GroupingExprPtr
-      return printGroupingExpr(std::get<1>(expression));
-    case 2:  // LiteralExprPtr
-      return printLiteralExpr(std::get<2>(expression));
-    case 3:  // UnaryExprPtr
-      return printUnaryExpr(std::get<3>(expression));
-    case 4:  // ConditionalExprPtr
-      return printConditionalExpr(std::get<4>(expression));
-    case 5:  // PostfixExprPtr
-      return printPostfixExpr(std::get<5>(expression));
-    case 6:  // VariableExprPtr
-      return printVariableExpr(std::get<6>(expression));
-    case 7:  // AssignmentExprPtr
-      return printAssignmentExpr(std::get<7>(expression));
-    case 8:  // LogicalExprPtr
-      return printLogicalExpr(std::get<8>(expression));
-    case 9:  // CallExprPtr
-      return printCallExpr(std::get<9>(expression));
-    case 10:  // FuncExprPtr
-      return printFuncExpr(std::get<10>(expression));
-    default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 11,
-                    "Looks like you forgot to update the cases in "
-                    "PrettyPrinter::toString(const ExptrVariant&)!");
-      return "";
+auto printClassStmt(const ClassStmtPtr& stmt) -> std::vector<std::string> {
+  std::vector<std::string> strVec;
+  strVec.emplace_back("(CLASS " + stmt->className.getLexeme() + " ) {");
+  for (const StmtPtrVariant& method : stmt->methods) {
+    std::vector<std::string> methodStr = PrettyPrinter::toString(method);
+    std::move(methodStr.begin(), methodStr.end(), std::back_inserter(strVec));
   }
+  strVec.emplace_back("}");
+  return strVec;
 }
+
+}  // namespace
 
 auto PrettyPrinter::toString(const StmtPtrVariant& statement)
     -> std::vector<std::string> {
@@ -246,9 +281,11 @@ auto PrettyPrinter::toString(const StmtPtrVariant& statement)
       return printFuncStmt(std::get<7>(statement));
     case 8:  // RetStmtPtr
       return std::vector(1, printRetStmt(std::get<8>(statement)));
+    case 9:  // ClassStmtPtr
+      return printClassStmt(std::get<9>(statement));
     default:
       static_assert(
-          std::variant_size_v<StmtPtrVariant> == 9,
+          std::variant_size_v<StmtPtrVariant> == 10,
           "Looks like you forgot to update the cases in "
           "PrettyPrinter::toString(const StmtPtrVariant& statement)!");
       return {};

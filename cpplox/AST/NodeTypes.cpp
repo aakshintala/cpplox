@@ -1,11 +1,11 @@
 #include "cpplox/AST/NodeTypes.h"
 
 #include <initializer_list>
-#include <memory>
-#include <utility>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace cpplox::AST {
 // ========================== //
@@ -50,6 +50,14 @@ CallExpr::CallExpr(ExprPtrVariant callee, Token paren,
 FuncExpr::FuncExpr(std::vector<Token> parameters,
                    std::vector<StmtPtrVariant> body)
     : parameters(std::move(parameters)), body(std::move(body)) {}
+
+GetExpr::GetExpr(ExprPtrVariant expr, Token name)
+    : expr(std::move(expr)), name(std::move(name)) {}
+
+SetExpr::SetExpr(ExprPtrVariant expr, Token name, ExprPtrVariant value)
+    : expr(std::move(expr)), name(std::move(name)), value(std::move(value)) {}
+
+ThisExpr::ThisExpr(Token keyword) : keyword(std::move(keyword)) {}
 
 // ==============================//
 // EPV creation helper functions //
@@ -105,6 +113,20 @@ auto createFuncEPV(std::vector<Token> params,
   return std::make_unique<FuncExpr>(std::move(params), std::move(fnBody));
 }
 
+auto createGetEPV(ExprPtrVariant expr, Token name) -> ExprPtrVariant {
+  return std::make_unique<GetExpr>(std::move(expr), std::move(name));
+}
+
+auto createSetEPV(ExprPtrVariant expr, Token name, ExprPtrVariant value)
+    -> ExprPtrVariant {
+  return std::make_unique<SetExpr>(std::move(expr), std::move(name),
+                                   std::move(value));
+}
+
+auto createThisEPV(Token keyword) -> ExprPtrVariant {
+  return std::make_unique<ThisExpr>(std::move(keyword));
+}
+
 // =================== //
 // Statment AST types; //
 // =================== //
@@ -141,6 +163,9 @@ FuncStmt::FuncStmt(Token funcName, FuncExprPtr funcExpr)
 
 RetStmt::RetStmt(Token ret, std::optional<ExprPtrVariant> value)
     : ret(std::move(ret)), value(std::move(value)) {}
+
+ClassStmt::ClassStmt(Token className, std::vector<StmtPtrVariant> methods)
+    : className(std::move(className)), methods(std::move(methods)) {}
 
 // ============================================================= //
 // Helper functions to create StmtPtrVariants for each Stmt type //
@@ -188,6 +213,11 @@ auto createFuncSPV(Token fName, FuncExprPtr funcExpr) -> StmtPtrVariant {
 auto createRetSPV(Token ret, std::optional<ExprPtrVariant> value)
     -> StmtPtrVariant {
   return std::make_unique<RetStmt>(std::move(ret), std::move(value));
+}
+
+auto createClassSPV(Token className, std::vector<StmtPtrVariant> methods)
+    -> StmtPtrVariant {
+  return std::make_unique<ClassStmt>(std::move(className), std::move(methods));
 }
 
 }  // namespace cpplox::AST

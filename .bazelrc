@@ -2,7 +2,7 @@
 build --cxxopt='-std=c++17'
 
 # enable debugPrint or not
-#build --cxxopt='-D_CPPLOX_DEBUG_'
+build --cxxopt='-D_CPPLOX_DEBUG_'
 
 # debug build
 #build --cxxopt='-g'

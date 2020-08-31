@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 
 #include "cpplox/AST/PrettyPrinter.h"
@@ -30,6 +31,23 @@ auto Evaluator::getDouble(const Token& token, const LoxObject& right)
         "Attempted to perform arithmetic operation on non-numeric literal "
             + getObjectString(right));
   return std::get<double>(right);
+}
+
+auto Evaluator::bindInstance(const FuncShrdPtr& method,
+                             LoxInstanceShrdPtr instance) -> FuncShrdPtr {
+  auto environToRestore = environManager.getCurrEnv();
+  // Set the currentEnviron to the function's closure,
+  environManager.setCurrEnv(method->getClosure());
+  // Create a new environment and define 'this' to point to the instance
+  environManager.createNewEnviron();
+  auto methodClosure = environManager.getCurrEnv();
+  environManager.define("this", instance);
+  // restore the environ.
+  environManager.setCurrEnv(environToRestore);
+  // create and return a new FuncObj that uses this new environ as its closure.
+  return std::make_shared<FuncObj>(method->getDecl(), method->getFnName(),
+                                   methodClosure, method->getIsMethod(),
+                                   method->getIsInitializer());
 }
 
 //===============================//
@@ -188,12 +206,36 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
     return std::get<BuiltinFuncShrdPtr>(callee)->run();
   }
 
-  const FuncShrdPtr funcObj = ([&]() -> FuncShrdPtr {
-    if (EXPECT_FALSE(!std::holds_alternative<FuncShrdPtr>(callee)))
-      throw reportRuntimeError(eReporter, expr->paren,
-                               "Attempted to invoke a non-function");
-    return std::get<FuncShrdPtr>(callee);
+  LoxObject instanceOrNull = ([&]() -> LoxObject {
+    if (EXPECT_FALSE(std::holds_alternative<LoxClassShrdPtr>(callee)))
+      return LoxObject(
+          std::make_shared<LoxInstance>(std::get<LoxClassShrdPtr>(callee)));
+    return LoxObject(nullptr);
   })();
+
+  const FuncShrdPtr funcObj = ([&]() -> FuncShrdPtr {
+    if (std::holds_alternative<LoxClassShrdPtr>(callee)) {
+      auto instance = std::get<LoxInstanceShrdPtr>(instanceOrNull);
+      try {
+        return bindInstance(std::get<FuncShrdPtr>(instance->get("init")),
+                            instance);
+      } catch (const ErrorsAndDebug::RuntimeError& e) {
+        return nullptr;
+      }
+    }
+
+    if (EXPECT_TRUE(std::holds_alternative<FuncShrdPtr>(callee)))
+      return std::get<FuncShrdPtr>(callee);
+
+    throw reportRuntimeError(eReporter, expr->paren,
+                             "Attempted to invoke a non-function");
+  })();
+
+  if (funcObj.get() == nullptr) {
+    // exit early if there is no initializer; safe because we only come here if
+    // this callee is a constructor and there is no initializer.
+    return instanceOrNull;
+  }
 
   // Throw error if arity doesn't match the number of arguments supplied
   if (size_t arity = funcObj->arity(), numArgs = expr->arguments.size();
@@ -234,16 +276,25 @@ auto Evaluator::evaluateCallExpr(const CallExprPtr& expr) -> LoxObject {
 #endif  // EVAL_DEBUG
 
   // Evaluate the function
-  std::optional<LoxObject> result = evaluateStmts(funcObj->getFnBodyStmts());
+  std::optional<LoxObject> fnRet = evaluateStmts(funcObj->getFnBodyStmts());
 
   // Teardown any environments created by the function.
-  environManager.discardEnvironsTill(funcObj->getClosure());
+  if (!funcObj->getIsMethod())
+    environManager.discardEnvironsTill(funcObj->getClosure());
+  else
+    environManager.discardEnvironsTill(funcObj->getClosure()->getParentEnv());
   // Restore caller's environment.
   environManager.setCurrEnv(environToRestore);
 
   // return result or LoxObject(nullptr);
-  if (result.has_value()) return result.value();
-  return LoxObject(nullptr);
+  if (fnRet.has_value()) {
+    if (EXPECT_FALSE(funcObj->getIsInitializer()))
+      throw ErrorsAndDebug::reportRuntimeError(
+          eReporter, expr->paren,
+          "Initializer can't return a value other than 'this'");
+    return fnRet.value();
+  }
+  return instanceOrNull;
 }
 
 auto Evaluator::evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject {
@@ -258,6 +309,43 @@ auto Evaluator::evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject {
   environManager.createNewEnviron();
   return std::make_shared<FuncObj>(expr, "LoxAnonFuncDoNotUseThisNameAADWAED",
                                    std::move(closure));
+}
+
+auto Evaluator::evaluateGetExpr(const GetExprPtr& expr) -> LoxObject {
+  LoxObject instObj = evaluateExpr(expr->expr);
+  if (EXPECT_FALSE(!std::holds_alternative<LoxInstanceShrdPtr>(instObj)))
+    throw reportRuntimeError(eReporter, expr->name,
+                             "Only instances have properties");
+  try {
+    LoxObject property
+        = std::get<LoxInstanceShrdPtr>(instObj)->get(expr->name.getLexeme());
+    if (std::holds_alternative<FuncShrdPtr>(property)) {
+      // if it's a method that we just looked up, then we need to create a
+      // binding for 'this'
+      property = LoxObject(bindInstance(std::get<FuncShrdPtr>(property),
+                                        std::get<LoxInstanceShrdPtr>(instObj)));
+    }
+    return property;
+  } catch (const ErrorsAndDebug::RuntimeError& e) {
+    throw ErrorsAndDebug::reportRuntimeError(
+        eReporter, expr->name,
+        "Attempted to access undefined property: " + expr->name.getLexeme()
+            + " on " + std::get<LoxInstanceShrdPtr>(instObj)->toString());
+  }
+}
+
+auto Evaluator::evaluateSetExpr(const AST::SetExprPtr& expr) -> LoxObject {
+  LoxObject object = evaluateExpr(expr->expr);
+  if (EXPECT_FALSE(!std::holds_alternative<LoxInstanceShrdPtr>(object)))
+    throw ErrorsAndDebug::reportRuntimeError(eReporter, expr->name,
+                                             "Only instances have fields.");
+  LoxObject value = evaluateExpr(expr->value);
+  std::get<LoxInstanceShrdPtr>(object)->set(expr->name.getLexeme(), value);
+  return value;
+}
+
+auto Evaluator::evaluateThisExpr(const ThisExprPtr& expr) -> LoxObject {
+  return environManager.get(expr->keyword);
 }
 
 auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
@@ -284,8 +372,14 @@ auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
       return evaluateCallExpr(std::get<9>(expr));
     case 10:  // FuncExprPtr
       return evaluateFuncExpr(std::get<10>(expr));
+    case 11:  // GetExprPtr
+      return evaluateGetExpr(std::get<11>(expr));
+    case 12:  // SetExprPtr
+      return evaluateSetExpr(std::get<12>(expr));
+    case 13:  // ThisExprPtr
+      return evaluateThisExpr(std::get<13>(expr));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 11,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 14,
                     "Looks like you forgot to update the cases in "
                     "Evaluator::Evaluate(const ExptrVariant&)!");
       return "";
@@ -405,6 +499,28 @@ auto Evaluator::evaluateRetStmt(const RetStmtPtr& stmt)
              : std::nullopt;
 }
 
+auto Evaluator::evaluateClassStmt(const ClassStmtPtr& stmt)
+    -> std::optional<LoxObject> {
+  environManager.define(stmt->className, LoxObject(nullptr));
+
+  std::vector<std::pair<std::string, LoxObject>> methods;
+  std::shared_ptr<Environment> closure = environManager.getCurrEnv();
+  for (const auto& stmt : stmt->methods) {
+    const auto& functionStmt = std::get<FuncStmtPtr>(stmt);
+    bool isInitializer = functionStmt->funcName.getLexeme() == "init";
+    LoxObject method = std::make_shared<FuncObj>(
+        functionStmt->funcExpr, functionStmt->funcName.getLexeme(),
+        std::move(closure), true, isInitializer);
+    methods.emplace_back(functionStmt->funcName.getLexeme(), method);
+  }
+  environManager.createNewEnviron();
+
+  environManager.assign(
+      stmt->className,
+      std::make_shared<LoxClass>(stmt->className.getLexeme(), methods));
+  return std::nullopt;
+}
+
 auto Evaluator::evaluateStmt(const AST::StmtPtrVariant& stmt)
     -> std::optional<LoxObject> {
   switch (stmt.index()) {
@@ -426,9 +542,11 @@ auto Evaluator::evaluateStmt(const AST::StmtPtrVariant& stmt)
       return evaluateFuncStmt(std::get<7>(stmt));
     case 8:  // RetStmtPtr
       return evaluateRetStmt(std::get<8>(stmt));
+    case 9:  // ClassStmtPtr
+      return evaluateClassStmt(std::get<9>(stmt));
     default:
       static_assert(
-          std::variant_size_v<StmtPtrVariant> == 9,
+          std::variant_size_v<StmtPtrVariant> == 10,
           "Looks like you forgot to update the cases in "
           "PrettyPrinter::toString(const StmtPtrVariant& statement)!");
       return std::nullopt;

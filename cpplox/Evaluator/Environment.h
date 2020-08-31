@@ -28,8 +28,6 @@ class Environment : public Types::Uncopyable,
 
   auto assign(size_t hashedVarName, LoxObject object) -> bool;
   void define(size_t hashedVarName, LoxObject object);
-  void define(size_t hashedVarName, FuncShrdPtr function);
-  void define(size_t hashedVarName, BuiltinFuncShrdPtr function);
   auto get(size_t hashedVarName) -> LoxObject;
   auto getParentEnv() -> EnvironmentPtr;
   auto isGlobal() -> bool;
@@ -47,9 +45,8 @@ class EnvironmentManager : public Types::Uncopyable {
   void createNewEnviron(const std::string& caller = __builtin_FUNCTION());
   void discardEnvironsTill(const Environment::EnvironmentPtr& environToRestore,
                            const std::string& caller = __builtin_FUNCTION());
+  void define(const std::string& tokenStr, LoxObject object);
   void define(const Types::Token& varToken, LoxObject object);
-  void define(const Types::Token& varToken, FuncShrdPtr function);
-  void define(const Types::Token& varToken, BuiltinFuncShrdPtr function);
   auto get(const Types::Token& varToken) -> LoxObject;
   auto getCurrEnv() -> Environment::EnvironmentPtr;
   void setCurrEnv(Environment::EnvironmentPtr newCurr,

@@ -22,14 +22,18 @@ using AST::ConditionalExprPtr;
 using AST::ExprPtrVariant;
 using AST::FuncExprPtr;
 using AST::FuncStmtPtr;
+using AST::GetExprPtr;
 using AST::GroupingExprPtr;
 using AST::LiteralExprPtr;
 using AST::LogicalExprPtr;
 using AST::PostfixExprPtr;
+using AST::SetExprPtr;
+using AST::ThisExprPtr;
 using AST::UnaryExprPtr;
 using AST::VariableExprPtr;
 
 using AST::BlockStmtPtr;
+using AST::ClassStmtPtr;
 using AST::ExprStmtPtr;
 using AST::ForStmtPtr;
 using AST::IfStmtPtr;
@@ -69,6 +73,9 @@ class Evaluator {
   auto evaluateLogicalExpr(const LogicalExprPtr& expr) -> LoxObject;
   auto evaluateCallExpr(const CallExprPtr& expr) -> LoxObject;
   auto evaluateFuncExpr(const FuncExprPtr& expr) -> LoxObject;
+  auto evaluateGetExpr(const GetExprPtr& expr) -> LoxObject;
+  auto evaluateSetExpr(const SetExprPtr& expr) -> LoxObject;
+  auto evaluateThisExpr(const ThisExprPtr& expr) -> LoxObject;
 
   // evaluation functions for Stmt types
   auto evaluateExprStmt(const ExprStmtPtr& stmt) -> std::optional<LoxObject>;
@@ -80,9 +87,12 @@ class Evaluator {
   auto evaluateForStmt(const ForStmtPtr& stmt) -> std::optional<LoxObject>;
   auto evaluateFuncStmt(const FuncStmtPtr& stmt) -> std::optional<LoxObject>;
   auto evaluateRetStmt(const RetStmtPtr& stmt) -> std::optional<LoxObject>;
+  auto evaluateClassStmt(const ClassStmtPtr& stmt) -> std::optional<LoxObject>;
 
   // throws RuntimeError if right isn't a double
   auto getDouble(const Token& token, const LoxObject& right) -> double;
+  auto bindInstance(const FuncShrdPtr& method, LoxInstanceShrdPtr instance)
+      -> FuncShrdPtr;
 
   ErrorReporter& eReporter;
   EnvironmentManager environManager;
