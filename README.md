@@ -1,6 +1,7 @@
 # Cpp-lox
 
-C++ implementation of the lox programming language described in Bob Nystrom's book,
+C++ implementation of the Tree-Walk Interpreter for the
+lox programming language described in Part II of Bob Nystrom's book,
 [Crafting Interpreters](http://www.craftinginterpreters.com/).
 
 ## Lox
@@ -28,6 +29,12 @@ CPPLox Extensions:
 * Conditional expressions
 * Postfix and Prefix operators
 * strings concatenate with any other type.
+
+Differences from the implementation in the book:
+
+* Used C++17's variants instead of the visitor pattern.
+* I implemented a closure-based solution to scope resolution and variable binding,
+instead of the resolution pass over the AST Bob employed.
 
 ## Build Dependencies
 
