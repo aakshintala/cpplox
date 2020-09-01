@@ -59,6 +59,9 @@ SetExpr::SetExpr(ExprPtrVariant expr, Token name, ExprPtrVariant value)
 
 ThisExpr::ThisExpr(Token keyword) : keyword(std::move(keyword)) {}
 
+SuperExpr::SuperExpr(Token keyword, Token method)
+    : keyword(std::move(keyword)), method(std::move(method)) {}
+
 // ==============================//
 // EPV creation helper functions //
 // ==============================//
@@ -127,6 +130,10 @@ auto createThisEPV(Token keyword) -> ExprPtrVariant {
   return std::make_unique<ThisExpr>(std::move(keyword));
 }
 
+auto createSuperEPV(Token keyword, Token method) -> ExprPtrVariant {
+  return std::make_unique<SuperExpr>(std::move(keyword), std::move(method));
+}
+
 // =================== //
 // Statment AST types; //
 // =================== //
@@ -164,8 +171,11 @@ FuncStmt::FuncStmt(Token funcName, FuncExprPtr funcExpr)
 RetStmt::RetStmt(Token ret, std::optional<ExprPtrVariant> value)
     : ret(std::move(ret)), value(std::move(value)) {}
 
-ClassStmt::ClassStmt(Token className, std::vector<StmtPtrVariant> methods)
-    : className(std::move(className)), methods(std::move(methods)) {}
+ClassStmt::ClassStmt(Token className, std::optional<ExprPtrVariant> superClass,
+                     std::vector<StmtPtrVariant> methods)
+    : className(std::move(className)),
+      superClass(std::move(superClass)),
+      methods(std::move(methods)) {}
 
 // ============================================================= //
 // Helper functions to create StmtPtrVariants for each Stmt type //
@@ -215,9 +225,10 @@ auto createRetSPV(Token ret, std::optional<ExprPtrVariant> value)
   return std::make_unique<RetStmt>(std::move(ret), std::move(value));
 }
 
-auto createClassSPV(Token className, std::vector<StmtPtrVariant> methods)
-    -> StmtPtrVariant {
-  return std::make_unique<ClassStmt>(std::move(className), std::move(methods));
+auto createClassSPV(Token className, std::optional<ExprPtrVariant> superClass,
+                    std::vector<StmtPtrVariant> methods) -> StmtPtrVariant {
+  return std::make_unique<ClassStmt>(std::move(className),
+                                     std::move(superClass), std::move(methods));
 }
 
 }  // namespace cpplox::AST

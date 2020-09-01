@@ -50,19 +50,28 @@ BuiltinFunc::BuiltinFunc(std::string funcName,
 
 // LoxClass
 LoxClass::LoxClass(
-    std::string name,
+    std::string name, std::optional<LoxClassShrdPtr> superClass,
     const std::vector<std::pair<std::string, LoxObject>>& methodPairs)
-    : className(std::move(name)) {
+    : className(std::move(name)), superClass(std::move(superClass)) {
   for (const std::pair<std::string, LoxObject>& mPair : methodPairs)
     methods.insert_or_assign(hasher(mPair.first), mPair.second);
 }
 
 auto LoxClass::getClassName() -> std::string { return className; }
 
+auto LoxClass::getSuperClass() -> std::optional<LoxClassShrdPtr> {
+  return superClass;
+}
+
 auto LoxClass::findMethod(const std::string& methodName)
     -> std::optional<LoxObject> {
   auto iter = methods.find(hasher(methodName));
   if (iter != methods.end()) return iter->second;
+
+  if (superClass.has_value()) {
+    return superClass.value()->findMethod(methodName);
+  }
+
   return std::nullopt;
 }
 

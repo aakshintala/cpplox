@@ -67,7 +67,7 @@ EnvironmentManager::EnvironmentManager(ErrorReporter& eReporter)
 #ifdef ENVIRON_DEBUG
   ErrorsAndDebug::debugPrint(
       "EnvironmentManager is now alive! Global Envrion = "
-      + std::to_string((pointer_t)currEnviron.get()));
+      + std::to_string((uint64_t)currEnviron.get()));
 #endif
 }
 
@@ -75,7 +75,7 @@ void EnvironmentManager::createNewEnviron(const std::string& caller) {
   currEnviron = std::make_shared<Environment>(currEnviron);
 #ifdef ENVIRON_DEBUG
   ErrorsAndDebug::debugPrint(caller + " requested new environ: "
-                             + std::to_string((pointer_t)currEnviron.get())
+                             + std::to_string((uint64_t)currEnviron.get())
                              + ".");
 #endif
 }
@@ -85,9 +85,9 @@ void EnvironmentManager::discardEnvironsTill(
     const std::string& caller) {
 #ifdef ENVIRON_DEBUG
   ErrorsAndDebug::debugPrint("discardEnvironsTill( "
-                             + std::to_string((pointer_t)environToRestore.get())
+                             + std::to_string((uint64_t)environToRestore.get())
                              + " ) called by " + caller + ". CurrEnviron: "
-                             + std::to_string((pointer_t)currEnviron.get())
+                             + std::to_string((uint64_t)currEnviron.get())
                              + ".");
 #endif
   // Global environment should only be destroyed when the Environment Manager
@@ -96,7 +96,7 @@ void EnvironmentManager::discardEnvironsTill(
                      && currEnviron.get() != environToRestore.get())) {
 #ifdef ENVIRON_DEBUG
     ErrorsAndDebug::debugPrint("Discarding environ "
-                               + std::to_string((pointer_t)currEnviron.get())
+                               + std::to_string((uint64_t)currEnviron.get())
                                + ".");
 #endif
     currEnviron = currEnviron->getParentEnv();
@@ -143,8 +143,8 @@ void EnvironmentManager::setCurrEnv(Environment::EnvironmentPtr newCurr,
 #ifdef ENVIRON_DEBUG
   ErrorsAndDebug::debugPrint(
       caller + " requested setting currEnviron to: "
-      + std::to_string((pointer_t)newCurr.get())
-      + ". CurrEnviron: " + std::to_string((pointer_t)currEnviron.get()) + ".");
+      + std::to_string((uint64_t)newCurr.get())
+      + ". CurrEnviron: " + std::to_string((uint64_t)currEnviron.get()) + ".");
 #endif
   currEnviron = std::move(newCurr);
 }

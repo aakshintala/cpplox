@@ -48,6 +48,7 @@ class EnvironmentManager : public Types::Uncopyable {
   void define(const std::string& tokenStr, LoxObject object);
   void define(const Types::Token& varToken, LoxObject object);
   auto get(const Types::Token& varToken) -> LoxObject;
+  auto get(const std::string& varToken) -> LoxObject;
   auto getCurrEnv() -> Environment::EnvironmentPtr;
   void setCurrEnv(Environment::EnvironmentPtr newCurr,
                   const std::string& caller = __builtin_FUNCTION());

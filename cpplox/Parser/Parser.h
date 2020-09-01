@@ -19,7 +19,7 @@
 // program     → declaration* LOX_EOF;
 // declaration → varDecl | funcDecl | classDecl | statement;
 // varDecl     → "var" IDENTIFIER ("=" expression)? ";" ;
-// classDecl   → "class" IDENTIFIER "{" funcDecl* "}" ;
+// classDecl   → "class" IDENTIFIER ("<" IDENTIFIER)? "{" funcDecl* "}" ;
 // funcDecl    → IDENTIFIER funcBody;
 // funcBody     → "(" parameters? ")" "{" declaration "}";
 // statement   → exprStmt | printStmt | blockStmt | ifStmt | whileStmt |
@@ -51,6 +51,7 @@
 // primary     → "(" expression ")";
 // primary     → IDENTIFIER;
 // primary     → "fun" funcBody;
+// primary     → "super" "." IDENTIFIER;
 // Error Productions:
 // primary     → ("!=" | "==") equality;
 // primary     → (">" | ">=" | "<" | "<=") comparison;
@@ -123,6 +124,7 @@ class RDParser {
   auto consumeGroupingExpr() -> ExprPtrVariant;
   auto consumePostfixExpr(ExprPtrVariant expr) -> ExprPtrVariant;
   void consumeSemicolonOrError();
+  auto consumeSuper() -> ExprPtrVariant;
   auto consumeUnaryExpr() -> ExprPtrVariant;
   auto consumeVarExpr() -> ExprPtrVariant;
   auto error(const std::string& eMessage) -> RDParseError;

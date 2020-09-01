@@ -52,6 +52,15 @@ auto RDParser::consumeOneLiteral() -> ExprPtrVariant {
   return AST::createLiteralEPV(getTokenAndAdvance().getOptionalLiteral());
 }
 
+auto RDParser::consumeSuper() -> ExprPtrVariant {
+  Token super = getTokenAndAdvance();
+  consumeOrError(TokenType::DOT, "Expected a '.' after 'super' keyword");
+  if (!match(TokenType::IDENTIFIER))
+    throw error("Expected an identifier after 'super.' ");
+  Token method = getTokenAndAdvance();
+  return AST::createSuperEPV(std::move(super), std::move(method));
+}
+
 auto RDParser::consumeGroupingExpr() -> ExprPtrVariant {
   advance();
   ExprPtrVariant expr = expression();
@@ -283,17 +292,36 @@ auto RDParser::funcDecl(const std::string& kind) -> StmtPtrVariant {
   throw error("Expected a " + kind + " name after the fun keyword");
 }
 
-// classDecl   → IDENTIFIER "{" funcDecl* "}" ;
+// classDecl   → "class" IDENTIFIER ("<" IDENTIFIER)? "{" funcDecl* "}" ;
 auto RDParser::classDecl() -> StmtPtrVariant {
   if (match(TokenType::IDENTIFIER)) {
     Token className = getTokenAndAdvance();
+
+    std::optional<ExprPtrVariant> superClass
+        = [&]() -> std::optional<ExprPtrVariant> {
+      if (match(TokenType::LESS)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+          auto superClassVar = consumeVarExpr();
+          if ((std::get<AST::VariableExprPtr>(superClassVar)
+                   ->varName.getLexeme()
+               == className.getLexeme()))
+            throw error("A class can't inherit from itself");
+          return superClassVar;
+        }
+        throw error("Expected a superclass name after '<'");
+      }
+      return std::nullopt;
+    }();
+
     consumeOrError(TokenType::LEFT_BRACE, "Expecte '{' after class name.");
     std::vector<StmtPtrVariant> methods;
     while (!match(TokenType::RIGHT_BRACE) && !isAtEnd()) {
       methods.push_back(funcDecl("method"));
     }
     consumeOrError(TokenType::RIGHT_BRACE, "Expecte '}' after class body.");
-    return AST::createClassSPV(std::move(className), std::move(methods));
+    return AST::createClassSPV(std::move(className), std::move(superClass),
+                               std::move(methods));
   }
   throw error("Expected a name after the class keyword");
 }
@@ -572,6 +600,7 @@ auto RDParser::arguments() -> std::vector<ExprPtrVariant> {
 // primary    → NUMBER | STRING | "false" | "true" | "nil";
 // primary    →  "(" expression ")" | IDENTIFIER;
 // primary     → "fun" funBody;
+// primary     → "super" "." IDENTIFIER;
 //  Error Productions:
 // primary    → ("!=" | "==") equality
 // primary    → (">" | ">=" | "<" | "<=") comparison
@@ -587,6 +616,7 @@ auto RDParser::primary() -> ExprPtrVariant {
   if (match(TokenType::THIS)) return AST::createThisEPV(getTokenAndAdvance());
   if (match(TokenType::IDENTIFIER)) return consumeVarExpr();
   if (match(TokenType::FUN)) return funcBody("Anon-Function");
+  if (match(TokenType::SUPER)) return consumeSuper();
 
   // Check for known error productions. throws RDParseError;
   throwOnErrorProductions();

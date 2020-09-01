@@ -105,6 +105,10 @@ auto printThisExpr(const ThisExprPtr& expr) -> std::string {
   return "( this )";
 }
 
+auto printSuperExpr(const SuperExprPtr& expr) -> std::string {
+  return "( super." + expr->method.toString() + " )";
+}
+
 }  // namespace
 
 auto PrettyPrinter::toString(const ExprPtrVariant& expression) -> std::string {
@@ -137,8 +141,10 @@ auto PrettyPrinter::toString(const ExprPtrVariant& expression) -> std::string {
       return printSetExpr(std::get<12>(expression));
     case 13:  // ThisExprPtr
       return printThisExpr(std::get<13>(expression));
+    case 14:  // SuperExprPtr
+      return printSuperExpr(std::get<14>(expression));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 14,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 15,
                     "Looks like you forgot to update the cases in "
                     "PrettyPrinter::toString(const ExptrVariant&)!");
       return "";
@@ -249,7 +255,11 @@ auto printRetStmt(const RetStmtPtr& stmt) -> std::string {
 
 auto printClassStmt(const ClassStmtPtr& stmt) -> std::vector<std::string> {
   std::vector<std::string> strVec;
-  strVec.emplace_back("(CLASS " + stmt->className.getLexeme() + " ) {");
+  strVec.emplace_back("(CLASS " + stmt->className.getLexeme() + " )");
+  if (stmt->superClass.has_value())
+    strVec.emplace_back(" < "
+                        + PrettyPrinter::toString(stmt->superClass.value()));
+  strVec.emplace_back("{");
   for (const StmtPtrVariant& method : stmt->methods) {
     std::vector<std::string> methodStr = PrettyPrinter::toString(method);
     std::move(methodStr.begin(), methodStr.end(), std::back_inserter(strVec));

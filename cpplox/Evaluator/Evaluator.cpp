@@ -348,6 +348,21 @@ auto Evaluator::evaluateThisExpr(const ThisExprPtr& expr) -> LoxObject {
   return environManager.get(expr->keyword);
 }
 
+auto Evaluator::evaluateSuperExpr(const SuperExprPtr& expr) -> LoxObject {
+  LoxClassShrdPtr superClass
+      = std::get<LoxClassShrdPtr>(environManager.get(expr->keyword));
+  auto optionalMethod = superClass->findMethod(expr->method.getLexeme());
+  if (!optionalMethod.has_value())
+    throw ErrorsAndDebug::reportRuntimeError(
+        eReporter, expr->keyword,
+        "Attempted to access undefined property " + expr->keyword.getLexeme()
+            + " on super.");
+
+  return bindInstance(std::get<FuncShrdPtr>(optionalMethod.value()),
+                      std::get<LoxInstanceShrdPtr>(
+                          environManager.get(Token(TokenType::THIS, "this"))));
+}
+
 auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
   switch (expr.index()) {
     case 0:  // BinaryExprPtr
@@ -378,8 +393,10 @@ auto Evaluator::evaluateExpr(const ExprPtrVariant& expr) -> LoxObject {
       return evaluateSetExpr(std::get<12>(expr));
     case 13:  // ThisExprPtr
       return evaluateThisExpr(std::get<13>(expr));
+    case 14:  // SuperExprPtr
+      return evaluateSuperExpr(std::get<14>(expr));
     default:
-      static_assert(std::variant_size_v<ExprPtrVariant> == 14,
+      static_assert(std::variant_size_v<ExprPtrVariant> == 15,
                     "Looks like you forgot to update the cases in "
                     "Evaluator::Evaluate(const ExptrVariant&)!");
       return "";
@@ -501,7 +518,27 @@ auto Evaluator::evaluateRetStmt(const RetStmtPtr& stmt)
 
 auto Evaluator::evaluateClassStmt(const ClassStmtPtr& stmt)
     -> std::optional<LoxObject> {
+  // Determine if this class has a super class or not;
+  auto superClass = [&]() -> std::optional<LoxClassShrdPtr> {
+    if (stmt->superClass.has_value()) {
+      auto superClassObj = evaluateExpr(stmt->superClass.value());
+      if (!std::holds_alternative<LoxClassShrdPtr>(superClassObj))
+        throw ErrorsAndDebug::reportRuntimeError(
+            eReporter, stmt->className,
+            "Superclass must be a class; Can't inherit from non-class");
+      return std::get<LoxClassShrdPtr>(superClassObj);
+    }
+    return std::nullopt;
+  }();
+
+  // Define the class name in the current environment
   environManager.define(stmt->className, LoxObject(nullptr));
+
+  // If there is a super class, create a new environ and define 'super' there
+  if (superClass.has_value()) {
+    environManager.createNewEnviron();
+    environManager.define("super", superClass.value());
+  }
 
   std::vector<std::pair<std::string, LoxObject>> methods;
   std::shared_ptr<Environment> closure = environManager.getCurrEnv();
@@ -510,14 +547,24 @@ auto Evaluator::evaluateClassStmt(const ClassStmtPtr& stmt)
     bool isInitializer = functionStmt->funcName.getLexeme() == "init";
     LoxObject method = std::make_shared<FuncObj>(
         functionStmt->funcExpr, functionStmt->funcName.getLexeme(),
-        std::move(closure), true, isInitializer);
+        closure, true, isInitializer);
     methods.emplace_back(functionStmt->funcName.getLexeme(), method);
   }
+
+  // Discard the environment created for defining 'super'
+  if (superClass.has_value()) {
+    environManager.setCurrEnv(environManager.getCurrEnv()->getParentEnv());
+  }
+
+  // Declare the class
+  environManager.assign(stmt->className,
+                        std::make_shared<LoxClass>(stmt->className.getLexeme(),
+                                                   superClass, methods));
+
+  // Create a new environment so changes that occur afterwards in lexical order
+  // aren't visible to the class defn.
   environManager.createNewEnviron();
 
-  environManager.assign(
-      stmt->className,
-      std::make_shared<LoxClass>(stmt->className.getLexeme(), methods));
   return std::nullopt;
 }
 

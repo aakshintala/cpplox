@@ -28,6 +28,7 @@ using AST::LiteralExprPtr;
 using AST::LogicalExprPtr;
 using AST::PostfixExprPtr;
 using AST::SetExprPtr;
+using AST::SuperExprPtr;
 using AST::ThisExprPtr;
 using AST::UnaryExprPtr;
 using AST::VariableExprPtr;
@@ -76,6 +77,7 @@ class Evaluator {
   auto evaluateGetExpr(const GetExprPtr& expr) -> LoxObject;
   auto evaluateSetExpr(const SetExprPtr& expr) -> LoxObject;
   auto evaluateThisExpr(const ThisExprPtr& expr) -> LoxObject;
+  auto evaluateSuperExpr(const SuperExprPtr& expr) -> LoxObject;
 
   // evaluation functions for Stmt types
   auto evaluateExprStmt(const ExprStmtPtr& stmt) -> std::optional<LoxObject>;

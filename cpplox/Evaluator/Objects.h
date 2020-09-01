@@ -75,15 +75,17 @@ class BuiltinFunc : public Types::Uncopyable {
 
 class LoxClass : public Types::Uncopyable {
   const std::string className;
+  std::optional<LoxClassShrdPtr> superClass;
   std::hash<std::string> hasher;
   std::map<size_t, LoxObject> methods;
 
  public:
   explicit LoxClass(
-      std::string name,
+      std::string name, std::optional<LoxClassShrdPtr> superClass,
       const std::vector<std::pair<std::string, LoxObject>>& methodPairs);
 
   auto getClassName() -> std::string;
+  auto getSuperClass() -> std::optional<LoxClassShrdPtr>;
   auto findMethod(const std::string& methodName) -> std::optional<LoxObject>;
 };
 

@@ -35,6 +35,7 @@ struct FuncExpr;
 struct GetExpr;
 struct SetExpr;
 struct ThisExpr;
+struct SuperExpr;
 
 // Unique_pointer sugar for Exprs.
 using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
@@ -51,6 +52,7 @@ using FuncExprPtr = std::unique_ptr<FuncExpr>;
 using GetExprPtr = std::unique_ptr<GetExpr>;
 using SetExprPtr = std::unique_ptr<SetExpr>;
 using ThisExprPtr = std::unique_ptr<ThisExpr>;
+using SuperExprPtr = std::unique_ptr<SuperExpr>;
 
 // The variant that we will use to pass around pointers to each of these
 // expression types. I'm exploring this so we don't have to rely on vTables
@@ -59,7 +61,7 @@ using ExprPtrVariant
     = std::variant<BinaryExprPtr, GroupingExprPtr, LiteralExprPtr, UnaryExprPtr,
                    ConditionalExprPtr, PostfixExprPtr, VariableExprPtr,
                    AssignmentExprPtr, LogicalExprPtr, CallExprPtr, FuncExprPtr,
-                   GetExprPtr, SetExprPtr, ThisExprPtr>;
+                   GetExprPtr, SetExprPtr, ThisExprPtr, SuperExprPtr>;
 
 // Forward Declaration of Statement Node types;
 struct ExprStmt;
@@ -113,6 +115,7 @@ auto createGetEPV(ExprPtrVariant expr, Token name) -> ExprPtrVariant;
 auto createSetEPV(ExprPtrVariant expr, Token name, ExprPtrVariant value)
     -> ExprPtrVariant;
 auto createThisEPV(Token keyword) -> ExprPtrVariant;
+auto createSuperEPV(Token keyword, Token method) -> ExprPtrVariant;
 
 // Helper functions to create StmtPtrVariants for each Stmt type
 auto createExprSPV(ExprPtrVariant expr) -> StmtPtrVariant;
@@ -131,8 +134,8 @@ auto createForSPV(std::optional<StmtPtrVariant> initializer,
 auto createFuncSPV(Token fName, FuncExprPtr funcExpr) -> StmtPtrVariant;
 auto createRetSPV(Token ret, std::optional<ExprPtrVariant> value)
     -> StmtPtrVariant;
-auto createClassSPV(Token className, std::vector<StmtPtrVariant> methods)
-    -> StmtPtrVariant;
+auto createClassSPV(Token className, std::optional<ExprPtrVariant> superClass,
+                    std::vector<StmtPtrVariant> methods) -> StmtPtrVariant;
 
 // Expression AST Types:
 
@@ -223,6 +226,12 @@ struct ThisExpr final : public Uncopyable {
   explicit ThisExpr(Token keyword);
 };
 
+struct SuperExpr final : public Uncopyable {
+  Token keyword;
+  Token method;
+  explicit SuperExpr(Token keyword, Token method);
+};
+
 // Statment AST types;
 struct ExprStmt final : public Uncopyable {
   ExprPtrVariant expression;
@@ -284,8 +293,10 @@ struct RetStmt : public Uncopyable {
 
 struct ClassStmt : public Uncopyable {
   Token className;
+  std::optional<ExprPtrVariant> superClass;
   std::vector<StmtPtrVariant> methods;
-  ClassStmt(Token className, std::vector<StmtPtrVariant> methods);
+  ClassStmt(Token className, std::optional<ExprPtrVariant> superClass,
+            std::vector<StmtPtrVariant> methods);
 };
 
 }  // namespace cpplox::AST
